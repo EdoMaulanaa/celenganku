@@ -42,6 +42,10 @@ class AuthProvider extends ChangeNotifier {
   // Initialize auth state
   Future<void> _initializeAuth() async {
     try {
+      _status = AuthStatus.loading;
+      notifyListeners();
+      
+      // First, check current user
       final currentUser = _supabaseService.currentUser;
       
       if (currentUser != null) {
@@ -49,7 +53,16 @@ class AuthProvider extends ChangeNotifier {
         await _loadUserProfile(currentUser.id);
         _status = AuthStatus.authenticated;
       } else {
-        _status = AuthStatus.unauthenticated;
+        // If no current user, try to restore session
+        final hasSession = await _supabaseService.checkAndRestoreSession();
+        
+        if (hasSession && _supabaseService.currentUser != null) {
+          _user = _supabaseService.currentUser;
+          await _loadUserProfile(_user!.id);
+          _status = AuthStatus.authenticated;
+        } else {
+          _status = AuthStatus.unauthenticated;
+        }
       }
     } catch (e) {
       _status = AuthStatus.error;
@@ -216,6 +229,34 @@ class AuthProvider extends ChangeNotifier {
     }
   }
   
+  // Check and restore session if possible
+  Future<bool> checkAndRestoreSession() async {
+    try {
+      _status = AuthStatus.loading;
+      notifyListeners();
+      
+      // Attempt to refresh the session
+      final hasSession = await _supabaseService.checkAndRestoreSession();
+      
+      if (hasSession && _supabaseService.currentUser != null) {
+        _user = _supabaseService.currentUser;
+        await _loadUserProfile(_user!.id);
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        return true;
+      } else {
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = 'Failed to restore session: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+  
   // Update user profile
   Future<bool> updateProfile({String? username}) async {
     try {
@@ -265,6 +306,31 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _status = AuthStatus.error;
       _errorMessage = 'Failed to update password: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  // Verify user's current password
+  Future<bool> verifyPassword(String email, String password) async {
+    try {
+      _status = AuthStatus.loading;
+      _errorMessage = null;
+      notifyListeners();
+      
+      // Attempt to verify the password using the service
+      final isValid = await _supabaseService.verifyPassword(email, password);
+      
+      _status = isValid ? AuthStatus.authenticated : AuthStatus.error;
+      if (!isValid) {
+        _errorMessage = 'Invalid password';
+      }
+      notifyListeners();
+      
+      return isValid;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = 'Failed to verify password: ${e.toString()}';
       notifyListeners();
       return false;
     }

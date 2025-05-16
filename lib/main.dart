@@ -31,6 +31,9 @@ void main() async {
   // Initialize Supabase
   await SupabaseService.initialize();
   
+  // Set persistence to local storage for better session handling on refreshes
+  // This is already handled by SupabaseService.initialize() using local storage
+  
   runApp(const MyApp());
 }
 
@@ -68,8 +71,33 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AppWithTheme extends StatelessWidget {
+class AppWithTheme extends StatefulWidget {
   const AppWithTheme({super.key});
+
+  @override
+  State<AppWithTheme> createState() => _AppWithThemeState();
+}
+
+class _AppWithThemeState extends State<AppWithTheme> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Check authentication status on app start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStatus();
+    });
+  }
+  
+  Future<void> _checkAuthStatus() async {
+    // Get the auth provider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Check for existing session
+    if (authProvider.status != AuthStatus.authenticated) {
+      await authProvider.checkAndRestoreSession();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

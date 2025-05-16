@@ -36,6 +36,9 @@ class SupabaseService {
     await Supabase.initialize(
       url: SupabaseConfig.supabaseUrl,
       anonKey: SupabaseConfig.supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        autoRefreshToken: true,
+      ),
     );
   }
 
@@ -441,5 +444,35 @@ class SupabaseService {
         .storage
         .from(bucket)
         .remove([path]);
+  }
+
+  // Check for existing session and restore if possible
+  Future<bool> checkAndRestoreSession() async {
+    try {
+      final AuthResponse response = await auth.refreshSession();
+      return response.session != null;
+    } catch (e) {
+      print('Error refreshing session: $e');
+      return false;
+    }
+  }
+
+  // Verify password by attempting to sign in
+  Future<bool> verifyPassword(String email, String password) async {
+    try {
+      // We'll attempt to sign in with the provided credentials
+      // If it works, the password is correct
+      final response = await auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      
+      // If we get here, the password was correct
+      return response.session != null;
+    } catch (e) {
+      // If we get an exception, the password was likely incorrect
+      print('Error verifying password: $e');
+      return false;
+    }
   }
 }

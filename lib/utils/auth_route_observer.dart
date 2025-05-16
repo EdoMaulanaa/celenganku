@@ -24,7 +24,10 @@ class AuthRouteObserver extends NavigatorObserver {
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    // Do nothing - we'll let the regular push/pop handle auth checks
+    // Check auth on replace as well - this can happen on refresh
+    if (newRoute != null) {
+      _checkAuthStatus(newRoute);
+    }
   }
 
   @override
@@ -33,7 +36,7 @@ class AuthRouteObserver extends NavigatorObserver {
     // No need to check auth on pop
   }
 
-  void _checkAuthStatus(Route<dynamic> route) {
+  Future<void> _checkAuthStatus(Route<dynamic> route) async {
     // Avoid concurrent navigation operations
     if (_isHandlingNavigation) return;
     _isHandlingNavigation = true;
@@ -57,7 +60,22 @@ class AuthRouteObserver extends NavigatorObserver {
 
       // Check authentication status
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      if (authProvider.status != AuthStatus.authenticated) {
+      
+      // If we're in loading state, wait a bit
+      if (authProvider.status == AuthStatus.loading) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // Try to restore session if needed
+      if (authProvider.status == AuthStatus.unauthenticated ||
+          authProvider.status == AuthStatus.error) {
+        
+        // Don't redirect if we're already going to login
+        if (route.settings.name == '/login') {
+          _isHandlingNavigation = false;
+          return;
+        }
+        
         // If not authenticated, redirect to login screen
         route.navigator?.pushAndRemoveUntil(
           MaterialPageRoute(

@@ -4,8 +4,27 @@ import '../providers/auth_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/home/home_screen.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Try to restore session if needed
+    _checkSession();
+  }
+  
+  Future<void> _checkSession() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.status == AuthStatus.unauthenticated) {
+      await authProvider.checkAndRestoreSession();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

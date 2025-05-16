@@ -16,18 +16,22 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     
-    // Delay for 2 seconds to show splash screen, then navigate
-    Future.delayed(const Duration(seconds: 2), () {
-      checkAuthAndNavigate();
-    });
+    // Start auth check without delay
+    _checkAuthAndNavigate();
   }
   
   // Check authentication status and navigate accordingly
-  void checkAuthAndNavigate() {
+  Future<void> _checkAuthAndNavigate() async {
     if (!mounted) return;
     
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
+    // Wait at least 2 seconds to show splash screen
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (!mounted) return;
+    
+    // Check auth status again after the delay
     if (authProvider.status == AuthStatus.authenticated) {
       // Navigate to home screen if authenticated
       Navigator.of(context).pushReplacement(
@@ -36,8 +40,20 @@ class _SplashScreenState extends State<SplashScreen> {
           settings: const RouteSettings(name: '/home'),
         ),
       );
-    } else {
+    } else if (authProvider.status == AuthStatus.unauthenticated) {
       // Navigate to login screen if not authenticated
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+          settings: const RouteSettings(name: '/login'),
+        ),
+      );
+    } else if (authProvider.status == AuthStatus.loading) {
+      // Wait a bit longer if still loading
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) _checkAuthAndNavigate();
+    } else {
+      // Default to login on error
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => const LoginScreen(),

@@ -527,6 +527,15 @@ class _DashboardTabState extends State<DashboardTab> {
                   child: Builder(
                     builder: (context) {
                       try {
+                        // First check if icon name is valid
+                        if (pot.iconName == null || pot.iconName!.isEmpty) {
+                          return Icon(
+                            Icons.savings_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          );
+                        }
+                        
+                        // Try to create the icon from code point
                         return Icon(
                           pot.icon,
                           color: Theme.of(context).colorScheme.primary,

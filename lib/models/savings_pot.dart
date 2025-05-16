@@ -41,10 +41,30 @@ class SavingsPot {
     try {
       // Try parsing the iconName as a code point
       int codePoint = int.parse(iconName!);
-      return IconData(codePoint, fontFamily: 'MaterialIcons');
+      // Ensure the fontFamily is MaterialIcons and fontPackage is null for built-in icons
+      return IconData(
+        codePoint, 
+        fontFamily: 'MaterialIcons',
+        matchTextDirection: false,
+      );
     } catch (e) {
-      // If parsing fails, use a default icon
+      // If parsing fails, check if it's a string name of an icon (legacy format)
       print('Error parsing icon code point: $iconName, error: $e');
+      
+      // For legacy icons stored as string names, try to map to codepoints
+      if (iconName == 'savings_outlined') {
+        return Icons.savings_outlined;
+      } else if (iconName == 'account_balance_outlined') {
+        return Icons.account_balance_outlined;
+      } else if (iconName == 'house_outlined') {
+        return Icons.house_outlined;
+      } else if (iconName == 'directions_car_outlined') {
+        return Icons.directions_car_outlined;
+      } else if (iconName == 'flight_takeoff_outlined') {
+        return Icons.flight_takeoff_outlined;
+      }
+      
+      // Default fallback
       return defaultIcon;
     }
   }

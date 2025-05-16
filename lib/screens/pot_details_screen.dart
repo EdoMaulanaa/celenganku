@@ -168,6 +168,16 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   child: Builder(
                     builder: (context) {
                       try {
+                        // First check if icon name is valid
+                        if (pot.iconName == null || pot.iconName!.isEmpty) {
+                          return Icon(
+                            Icons.savings_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 24,
+                          );
+                        }
+                        
+                        // Try to create the icon from code point
                         return Icon(
                           pot.icon,
                           color: Theme.of(context).colorScheme.primary,
@@ -524,13 +534,26 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                               color: Theme.of(context).colorScheme.primaryContainer,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(
-                              IconData(
-                                int.parse(selectedIconCodePoint),
-                                fontFamily: 'MaterialIcons',
-                              ),
-                              size: 28,
-                              color: Theme.of(context).colorScheme.primary,
+                            child: Builder(
+                              builder: (context) {
+                                try {
+                                  return Icon(
+                                    IconData(
+                                      int.parse(selectedIconCodePoint),
+                                      fontFamily: 'MaterialIcons',
+                                    ),
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  );
+                                } catch (e) {
+                                  print('Error rendering selected icon: $e');
+                                  return Icon(
+                                    Icons.savings_outlined,
+                                    size: 28,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  );
+                                }
+                              },
                             ),
                           ),
                         ),
