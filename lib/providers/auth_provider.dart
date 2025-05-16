@@ -278,30 +278,55 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.loading;
       notifyListeners();
       
-      // Create file path in storage bucket
-      final filePath = 'avatar/${_user!.id}/$fileName';
+      print('Updating avatar for user: ${_user!.id}');
+      print('File name: $fileName');
+      print('File size: ${fileBytes.length} bytes');
       
-      // Upload avatar
-      final avatarUrl = await _supabaseService.uploadImage(
-        'avatars',
-        filePath,
-        fileBytes,
-      );
-      
-      // Update profile with new avatar URL
-      final updatedProfile = _profile!.copyWith(
-        avatarUrl: avatarUrl,
-        updatedAt: DateTime.now(),
-      );
-      
-      await _supabaseService.upsertProfile(updatedProfile);
-      
-      _profile = updatedProfile;
-      _status = AuthStatus.authenticated;
-      notifyListeners();
-      
-      return true;
+      try {
+        // Create file path in storage bucket - fix the path to match our policy
+        final filePath = '${_user!.id}/$fileName';
+        
+        // Upload avatar
+        final avatarUrl = await _supabaseService.uploadImage(
+          'avatars',
+          filePath,
+          fileBytes,
+        );
+        
+        // Update profile with new avatar URL
+        final updatedProfile = _profile!.copyWith(
+          avatarUrl: avatarUrl,
+          updatedAt: DateTime.now(),
+        );
+        
+        await _supabaseService.upsertProfile(updatedProfile);
+        
+        _profile = updatedProfile;
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        
+        print('Avatar updated successfully: $avatarUrl');
+        return true;
+      } catch (uploadError) {
+        print('Error during avatar upload: $uploadError');
+        
+        // Even if upload fails, try to update username
+        if (_profile != null) {
+          final updatedProfile = _profile!.copyWith(
+            updatedAt: DateTime.now(),
+          );
+          
+          await _supabaseService.upsertProfile(updatedProfile);
+          _profile = updatedProfile;
+        }
+        
+        _status = AuthStatus.error;
+        _errorMessage = 'Failed to update avatar: ${uploadError.toString()}';
+        notifyListeners();
+        return false;
+      }
     } catch (e) {
+      print('Critical error in updateAvatar: $e');
       _status = AuthStatus.error;
       _errorMessage = 'Failed to update avatar: ${e.toString()}';
       notifyListeners();

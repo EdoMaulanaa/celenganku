@@ -170,14 +170,12 @@ class SupabaseService {
   // Create a new savings pot
   Future<SavingsPot> createSavingsPot(SavingsPot pot) async {
     try {
-      print('Creating savings pot: ${pot.toJson()}');
       final response = await client
           .from('savings_pots')
           .insert(pot.toJson())
           .select()
           .single();
       
-      print('Savings pot created successfully: $response');
       return SavingsPot.fromJson(response);
     } catch (e) {
       print('Error creating savings pot: $e');
@@ -187,10 +185,15 @@ class SupabaseService {
   
   // Update a savings pot
   Future<void> updateSavingsPot(SavingsPot pot) async {
-    await client
-        .from('savings_pots')
-        .update(pot.toJson())
-        .eq('id', pot.id);
+    try {
+      await client
+          .from('savings_pots')
+          .update(pot.toJson())
+          .eq('id', pot.id);
+    } catch (e) {
+      print('Error updating savings pot: $e');
+      throw e;
+    }
   }
   
   // Delete a savings pot
@@ -379,15 +382,57 @@ class SupabaseService {
   
   // Upload an image (for user avatar or pot thumbnail)
   Future<String> uploadImage(String bucket, String path, List<int> fileBytes) async {
-    await client
-        .storage
-        .from(bucket)
-        .uploadBinary(path, Uint8List.fromList(fileBytes));
-    
-    return client
-        .storage
-        .from(bucket)
-        .getPublicUrl(path);
+    try {
+      print('Uploading image to bucket: $bucket, path: $path');
+      
+      try {
+        // Try to create the bucket if it doesn't exist (might fail due to permissions)
+        await client.storage.createBucket(bucket, const BucketOptions(
+          public: true,
+        ));
+        print('Bucket $bucket created or already exists');
+      } catch (e) {
+        print('Note: Could not create bucket: $e');
+        // Continue anyway as bucket might already exist
+      }
+      
+      try {
+        // Try to list buckets
+        final buckets = await client.storage.listBuckets();
+        print('Available buckets: ${buckets.map((b) => b.name).join(', ')}');
+      } catch (e) {
+        print('Could not list buckets: $e');
+      }
+      
+      // Upload the file
+      try {
+        await client
+            .storage
+            .from(bucket)
+            .uploadBinary(path, Uint8List.fromList(fileBytes));
+        print('File uploaded successfully');
+      } catch (e) {
+        print('Error in uploadBinary: $e');
+        throw e;
+      }
+      
+      // Get public URL
+      try {
+        final url = client
+            .storage
+            .from(bucket)
+            .getPublicUrl(path);
+        
+        print('Image uploaded successfully. Public URL: $url');
+        return url;
+      } catch (e) {
+        print('Error getting public URL: $e');
+        throw e;
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+      throw e;
+    }
   }
   
   // Delete an image

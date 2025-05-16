@@ -524,9 +524,21 @@ class _DashboardTabState extends State<DashboardTab> {
                     color: Theme.of(context).colorScheme.primaryContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    pot.icon,
-                    color: Theme.of(context).colorScheme.primary,
+                  child: Builder(
+                    builder: (context) {
+                      try {
+                        return Icon(
+                          pot.icon,
+                          color: Theme.of(context).colorScheme.primary,
+                        );
+                      } catch (e) {
+                        print('Dashboard: Error rendering icon: $e');
+                        return Icon(
+                          Icons.savings_outlined,
+                          color: Theme.of(context).colorScheme.primary,
+                        );
+                      }
+                    },
                   ),
                 ),
                 

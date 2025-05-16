@@ -30,9 +30,12 @@ class SavingsPot {
 
   // Convert iconName to IconData safely
   IconData get icon {
-    // Default icon if iconName is empty or null
+    // Default icon
+    const defaultIcon = Icons.savings_outlined;
+    
+    // If iconName is empty or null, return default
     if (iconName == null || iconName!.isEmpty) {
-      return Icons.savings_outlined;
+      return defaultIcon;
     }
     
     try {
@@ -41,8 +44,8 @@ class SavingsPot {
       return IconData(codePoint, fontFamily: 'MaterialIcons');
     } catch (e) {
       // If parsing fails, use a default icon
-      print('Error parsing icon code point: $e');
-      return Icons.savings_outlined;
+      print('Error parsing icon code point: $iconName, error: $e');
+      return defaultIcon;
     }
   }
 

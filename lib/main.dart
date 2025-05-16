@@ -17,9 +17,12 @@ import 'themes/app_theme.dart';
 
 // Screens
 import 'screens/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'widgets/auth_wrapper.dart';
 
 // Utils
 import 'utils/chart_utils.dart';
+import 'utils/auth_route_observer.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -75,12 +78,36 @@ class AppWithTheme extends StatelessWidget {
     
     return MaterialApp(
       title: 'Celenganku',
-      navigatorKey: navigatorKey, // Set global navigator key for chart context
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.themeMode,
       theme: AppTheme.lightTheme(),
       darkTheme: AppTheme.darkTheme(),
       home: const SplashScreen(),
+      navigatorObservers: [
+        AuthRouteObserver(),
+      ],
+      onGenerateRoute: (RouteSettings settings) {
+        // Named routes
+        if (settings.name == '/') {
+          return MaterialPageRoute(
+            builder: (_) => const SplashScreen(),
+            settings: settings,
+          );
+        } else if (settings.name == '/login') {
+          return MaterialPageRoute(
+            builder: (_) => const LoginScreen(),
+            settings: settings,
+          );
+        } else if (settings.name == '/auth') {
+          return MaterialPageRoute(
+            builder: (_) => const AuthWrapper(),
+            settings: settings,
+          );
+        }
+        
+        // Default route handling will use AuthRouteObserver
+        return null;
+      },
     );
   }
 }

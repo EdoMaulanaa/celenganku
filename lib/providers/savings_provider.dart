@@ -265,8 +265,8 @@ class SavingsProvider extends ChangeNotifier {
         return false;
       }
       
-      // Upload image
-      final filePath = 'savings_pot/$potId/$fileName';
+      // Upload image - fix the path structure
+      final filePath = '$potId/$fileName';
       final thumbnailUrl = await _supabaseService.uploadImage(
         'thumbnails',
         filePath,

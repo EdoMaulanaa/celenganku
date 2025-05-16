@@ -116,9 +116,21 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                     children: [
                       CircleAvatar(
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        child: Icon(
-                          pot.icon,
-                          color: Theme.of(context).colorScheme.primary,
+                        child: Builder(
+                          builder: (context) {
+                            try {
+                              return Icon(
+                                pot.icon,
+                                color: Theme.of(context).colorScheme.primary,
+                              );
+                            } catch (e) {
+                              print('Error rendering icon: $e');
+                              return Icon(
+                                Icons.savings_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              );
+                            }
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -246,10 +258,23 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Icon(
-                            pot.icon,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 24,
+                          child: Builder(
+                            builder: (context) {
+                              try {
+                                return Icon(
+                                  pot.icon,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 24,
+                                );
+                              } catch (e) {
+                                print('PotDetails Modal: Error rendering icon: $e');
+                                return Icon(
+                                  Icons.savings_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 24,
+                                );
+                              }
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -807,10 +832,750 @@ class SavingsPotTabState extends State<SavingsPotTab> {
   }
   
   void _showEditPotDialog(SavingsPot pot) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit ${pot.name} will be implemented soon'),
+    // Controllers for text fields
+    final nameController = TextEditingController(text: pot.name);
+    final descriptionController = TextEditingController(text: pot.description);
+    final targetAmountController = TextEditingController(
+      text: pot.targetAmount?.toString() ?? ''
+    );
+    
+    // Variables for state
+    DateTime? selectedDate = pot.targetDate;
+    bool isSubmitting = false;
+    String? errorMessage;
+    String selectedIconCodePoint = pot.iconName ?? Icons.savings_outlined.codePoint.toString();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dialog from closing when clicking outside
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Savings Pot'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Error message
+                    if (errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          errorMessage!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    
+                    // Icon selection
+                    Row(
+                      children: [
+                        const Text(
+                          'Icon:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        GestureDetector(
+                          onTap: () => _showIconSelectionDialog(
+                            context,
+                            selectedIconCodePoint,
+                            (String newIconCodePoint) {
+                              setDialogState(() {
+                                selectedIconCodePoint = newIconCodePoint;
+                              });
+                            },
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              IconData(
+                                int.parse(selectedIconCodePoint),
+                                fontFamily: 'MaterialIcons',
+                              ),
+                              size: 28,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => _showIconSelectionDialog(
+                            context,
+                            selectedIconCodePoint,
+                            (String newIconCodePoint) {
+                              setDialogState(() {
+                                selectedIconCodePoint = newIconCodePoint;
+                              });
+                            },
+                          ),
+                          child: const Text('Change'),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Name field
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name *',
+                        hintText: 'e.g., Vacation Fund',
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      maxLength: 50,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Description field
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'e.g., Saving for summer vacation',
+                      ),
+                      maxLength: 200,
+                      maxLines: 2,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Target amount field
+                    TextField(
+                      controller: targetAmountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Target Amount (Optional)',
+                        hintText: 'e.g., 5000000',
+                        prefixText: 'Rp ',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Target date field
+                    const Text(
+                      'Target Date (Optional)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 30)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                          );
+                          
+                          if (picked != null) {
+                            setDialogState(() {
+                              selectedDate = picked;
+                            });
+                          }
+                        } catch (e) {
+                          print("Error selecting date: $e");
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        selectedDate != null
+                            ? DateFormat('MMM dd, yyyy').format(selectedDate!)
+                            : 'Select Target Date',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('CANCEL'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          // Validate inputs
+                          if (nameController.text.trim().isEmpty) {
+                            setDialogState(() {
+                              errorMessage = 'Please enter a name for your savings pot';
+                            });
+                            return;
+                          }
+                          
+                          double? targetAmount;
+                          if (targetAmountController.text.isNotEmpty) {
+                            try {
+                              targetAmount = double.parse(
+                                targetAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')
+                              );
+                              if (targetAmount <= 0) {
+                                setDialogState(() {
+                                  errorMessage = 'Target amount must be greater than zero';
+                                });
+                                return;
+                              }
+                            } catch (e) {
+                              setDialogState(() {
+                                errorMessage = 'Please enter a valid target amount';
+                              });
+                              return;
+                            }
+                          }
+                          
+                          // Start submission
+                          setDialogState(() {
+                            isSubmitting = true;
+                            errorMessage = null;
+                          });
+                          
+                          try {
+                            final savingsProvider = Provider.of<SavingsProvider>(
+                              context,
+                              listen: false
+                            );
+                            
+                            final success = await savingsProvider.updateSavingsPot(
+                              id: pot.id,
+                              name: nameController.text.trim(),
+                              description: descriptionController.text.trim(),
+                              iconName: selectedIconCodePoint,
+                              targetAmount: targetAmount,
+                              targetDate: selectedDate,
+                            );
+                            
+                            if (success) {
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+                              
+                              // Refresh the list after slight delay
+                              await Future.delayed(const Duration(milliseconds: 300));
+                              
+                              if (mounted) {
+                                await _loadSavingsPots();
+                                
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Savings pot updated successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } else {
+                              if (!mounted) return;
+                              setDialogState(() {
+                                isSubmitting = false;
+                                errorMessage = savingsProvider.errorMessage ??
+                                    'Failed to update savings pot';
+                              });
+                            }
+                          } catch (e) {
+                            if (!mounted) return;
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = 'An error occurred: ${e.toString()}';
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('SAVE'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  void _showIconSelectionDialog(
+    BuildContext context, 
+    String currentIconCodePoint,
+    Function(String) onIconSelected
+  ) {
+    // List of commonly used Material icons for savings
+    final List<IconData> icons = [
+      // Finance related
+      Icons.savings_outlined,
+      Icons.account_balance_outlined,
+      Icons.account_balance_wallet_outlined,
+      Icons.attach_money,
+      Icons.credit_card_outlined,
+      Icons.payment_outlined,
+      Icons.currency_exchange_outlined,
+      
+      // Shopping related
+      Icons.shopping_bag_outlined,
+      Icons.shopping_cart_outlined,
+      Icons.store_outlined,
+      Icons.redeem_outlined,
+      Icons.card_giftcard_outlined,
+      
+      // Home and living
+      Icons.house_outlined,
+      Icons.home_outlined,
+      Icons.apartment_outlined,
+      Icons.chair_outlined,
+      Icons.bed_outlined,
+      Icons.kitchen_outlined,
+      
+      // Travel and transportation
+      Icons.directions_car_outlined,
+      Icons.flight_takeoff_outlined,
+      Icons.beach_access_outlined,
+      Icons.hotel_outlined,
+      Icons.luggage_outlined,
+      Icons.map_outlined,
+      
+      // Education
+      Icons.school_outlined,
+      Icons.book_outlined,
+      Icons.auto_stories_outlined,
+      
+      // Health and wellness
+      Icons.health_and_safety_outlined,
+      Icons.medical_services_outlined,
+      Icons.fitness_center_outlined,
+      Icons.spa_outlined,
+      
+      // Technology
+      Icons.phone_android_outlined,
+      Icons.laptop_outlined,
+      Icons.computer_outlined,
+      Icons.headphones_outlined,
+      Icons.camera_alt_outlined,
+      Icons.sports_esports_outlined,
+      
+      // Family and lifestyle
+      Icons.family_restroom,
+      Icons.people_outline,
+      Icons.child_care_outlined,
+      Icons.pets_outlined,
+      
+      // Food and dining
+      Icons.restaurant_outlined,
+      Icons.local_cafe_outlined,
+      Icons.bakery_dining_outlined,
+      Icons.emoji_food_beverage_outlined,
+      
+      // Miscellaneous
+      Icons.celebration_outlined,
+      Icons.favorite_outline,
+      Icons.star_outline,
+      Icons.flag_outlined,
+      Icons.emoji_emotions_outlined,
+      Icons.emoji_nature_outlined,
+      Icons.account_circle_outlined,
+      Icons.sports_basketball_outlined,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Icon'),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              childAspectRatio: 1,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: icons.length,
+            itemBuilder: (context, index) {
+              final IconData icon = icons[index];
+              final bool isSelected = icon.codePoint.toString() == currentIconCodePoint;
+              
+              return InkWell(
+                onTap: () {
+                  onIconSelected(icon.codePoint.toString());
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? Theme.of(context).colorScheme.primaryContainer 
+                        : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: isSelected
+                        ? Border.all(
+                            color: Theme.of(context).colorScheme.primary,
+                            width: 2,
+                          )
+                        : null,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: 32,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey[800],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('CANCEL'),
+          ),
+        ],
       ),
+    );
+  }
+  
+  void showCreatePotDialog() {
+    print("Show create pot dialog triggered");
+    
+    if (!mounted) {
+      print("Error: Widget not mounted when showCreatePotDialog was called");
+      return;
+    }
+    
+    // Controllers for text fields
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final targetAmountController = TextEditingController();
+    
+    // Variables for state
+    DateTime? selectedDate;
+    bool isSubmitting = false;
+    String? errorMessage;
+    String selectedIconCodePoint = Icons.savings_outlined.codePoint.toString();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dialog from closing when clicking outside
+      builder: (dialogContext) {
+        print("Dialog builder called with context: $dialogContext");
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            print("StatefulBuilder rebuilding");
+            return AlertDialog(
+              title: const Text('Create New Savings Pot'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Error message
+                    if (errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          errorMessage!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    
+                    // Icon selection
+                    Row(
+                      children: [
+                        const Text(
+                          'Icon:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        GestureDetector(
+                          onTap: () => _showIconSelectionDialog(
+                            context,
+                            selectedIconCodePoint,
+                            (String newIconCodePoint) {
+                              setDialogState(() {
+                                selectedIconCodePoint = newIconCodePoint;
+                              });
+                            },
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              IconData(
+                                int.parse(selectedIconCodePoint),
+                                fontFamily: 'MaterialIcons',
+                              ),
+                              size: 28,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => _showIconSelectionDialog(
+                            context,
+                            selectedIconCodePoint,
+                            (String newIconCodePoint) {
+                              setDialogState(() {
+                                selectedIconCodePoint = newIconCodePoint;
+                              });
+                            },
+                          ),
+                          child: const Text('Change'),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Name field
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name *',
+                        hintText: 'e.g., Vacation Fund',
+                      ),
+                      textCapitalization: TextCapitalization.words,
+                      maxLength: 50,
+                      autofocus: true,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Description field
+                    TextField(
+                      controller: descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'e.g., Saving for summer vacation',
+                      ),
+                      maxLength: 200,
+                      maxLines: 2,
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Target amount field
+                    TextField(
+                      controller: targetAmountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Target Amount (Optional)',
+                        hintText: 'e.g., 5000000',
+                        prefixText: 'Rp ',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Target date field
+                    const Text(
+                      'Target Date (Optional)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        try {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 30)),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                          );
+                          
+                          if (picked != null) {
+                            setDialogState(() {
+                              selectedDate = picked;
+                            });
+                          }
+                        } catch (e) {
+                          print("Error selecting date: $e");
+                        }
+                      },
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        selectedDate != null
+                            ? DateFormat('MMM dd, yyyy').format(selectedDate!)
+                            : 'Select Target Date',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('CANCEL'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          print('Create button pressed');
+                          
+                          // Validate inputs
+                          if (nameController.text.trim().isEmpty) {
+                            setDialogState(() {
+                              errorMessage = 'Please enter a name for your savings pot';
+                            });
+                            print("Validation error: Name is empty");
+                            return;
+                          }
+                          
+                          double? targetAmount;
+                          if (targetAmountController.text.isNotEmpty) {
+                            try {
+                              targetAmount = double.parse(
+                                targetAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')
+                              );
+                              if (targetAmount <= 0) {
+                                setDialogState(() {
+                                  errorMessage = 'Target amount must be greater than zero';
+                                });
+                                print("Validation error: Target amount <= 0");
+                                return;
+                              }
+                            } catch (e) {
+                              setDialogState(() {
+                                errorMessage = 'Please enter a valid target amount';
+                              });
+                              print("Validation error parsing target amount: $e");
+                              return;
+                            }
+                          }
+                          
+                          // Start submission
+                          setDialogState(() {
+                            isSubmitting = true;
+                            errorMessage = null;
+                          });
+                          
+                          try {
+                            final savingsProvider = Provider.of<SavingsProvider>(
+                              context,
+                              listen: false
+                            );
+                            
+                            print('Attempting to create pot: ${nameController.text.trim()}');
+                            print('Description: ${descriptionController.text.trim()}');
+                            print('Icon: $selectedIconCodePoint');
+                            print('Target Amount: $targetAmount');
+                            print('Target Date: $selectedDate');
+                            
+                            final success = await savingsProvider.createSavingsPot(
+                              name: nameController.text.trim(),
+                              description: descriptionController.text.trim(),
+                              iconName: selectedIconCodePoint,
+                              targetAmount: targetAmount,
+                              targetDate: selectedDate,
+                            );
+                            
+                            print('Create savings pot result: $success');
+                            
+                            if (success) {
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+                              
+                              // Refresh the list after slight delay
+                              await Future.delayed(const Duration(milliseconds: 300));
+                              
+                              if (mounted) {
+                                await _loadSavingsPots();
+                                
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Savings pot created successfully!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } else {
+                              if (!mounted) return;
+                              setDialogState(() {
+                                isSubmitting = false;
+                                errorMessage = savingsProvider.errorMessage ??
+                                    'Failed to create savings pot';
+                              });
+                              print('Failed to create pot: ${savingsProvider.errorMessage}');
+                            }
+                          } catch (e) {
+                            print('Exception creating pot: $e');
+                            if (!mounted) return;
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = 'An error occurred: ${e.toString()}';
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('CREATE'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
   
@@ -889,266 +1654,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
           ),
         ],
       ),
-    );
-  }
-  
-  void showCreatePotDialog() {
-    print("Show create pot dialog triggered");
-    
-    if (!mounted) {
-      print("Error: Widget not mounted when showCreatePotDialog was called");
-      return;
-    }
-    
-    // Controllers for text fields
-    final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final targetAmountController = TextEditingController();
-    
-    // Variables for state
-    DateTime? selectedDate;
-    bool isSubmitting = false;
-    String? errorMessage;
-    
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Prevent dialog from closing when clicking outside
-      builder: (dialogContext) {
-        print("Dialog builder called with context: $dialogContext");
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            print("StatefulBuilder rebuilding");
-            return AlertDialog(
-              title: const Text('Create New Savings Pot'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Error message
-                    if (errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Text(
-                          errorMessage!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    
-                    // Name field
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name *',
-                        hintText: 'e.g., Vacation Fund',
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      maxLength: 50,
-                      autofocus: true,
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Description field
-                    TextField(
-                      controller: descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'e.g., Saving for summer vacation',
-                      ),
-                      maxLength: 200,
-                      maxLines: 2,
-                    ),
-                    
-                    const SizedBox(height: 16),
-                    
-                    // Target amount field
-                    TextField(
-                      controller: targetAmountController,
-                      decoration: const InputDecoration(
-                        labelText: 'Target Amount (Optional)',
-                        hintText: 'e.g., 5000000',
-                        prefixText: 'Rp ',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Target date field
-                    const Text(
-                      'Target Date (Optional)',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now().add(const Duration(days: 30)),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-                          );
-                          
-                          if (picked != null) {
-                            setDialogState(() {
-                              selectedDate = picked;
-                              print("Selected date: $selectedDate");
-                            });
-                          }
-                        } catch (e) {
-                          print("Error selecting date: $e");
-                        }
-                      },
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(
-                        selectedDate != null
-                            ? DateFormat('MMM dd, yyyy').format(selectedDate!)
-                            : 'Select Target Date',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                  child: const Text('CANCEL'),
-                ),
-                ElevatedButton(
-                  onPressed: isSubmitting
-                      ? null
-                      : () async {
-                          print('Create button pressed');
-                          
-                          // Validate inputs
-                          if (nameController.text.trim().isEmpty) {
-                            setDialogState(() {
-                              errorMessage = 'Please enter a name for your savings pot';
-                            });
-                            print("Validation error: Name is empty");
-                            return;
-                          }
-                          
-                          double? targetAmount;
-                          if (targetAmountController.text.isNotEmpty) {
-                            try {
-                              targetAmount = double.parse(
-                                targetAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')
-                              );
-                              if (targetAmount <= 0) {
-                                setDialogState(() {
-                                  errorMessage = 'Target amount must be greater than zero';
-                                });
-                                print("Validation error: Target amount <= 0");
-                                return;
-                              }
-                            } catch (e) {
-                              setDialogState(() {
-                                errorMessage = 'Please enter a valid target amount';
-                              });
-                              print("Validation error parsing target amount: $e");
-                              return;
-                            }
-                          }
-                          
-                          // Start submission
-                          setDialogState(() {
-                            isSubmitting = true;
-                            errorMessage = null;
-                          });
-                          
-                          try {
-                            final savingsProvider = Provider.of<SavingsProvider>(
-                              context,
-                              listen: false
-                            );
-                            
-                            // Use the numeric code point of Icons.savings_outlined
-                            final iconCodePoint = Icons.savings_outlined.codePoint.toString();
-                            
-                            print('Attempting to create pot: ${nameController.text.trim()}');
-                            print('Description: ${descriptionController.text.trim()}');
-                            print('Icon: $iconCodePoint');
-                            print('Target Amount: $targetAmount');
-                            print('Target Date: $selectedDate');
-                            
-                            final success = await savingsProvider.createSavingsPot(
-                              name: nameController.text.trim(),
-                              description: descriptionController.text.trim(),
-                              iconName: iconCodePoint,
-                              targetAmount: targetAmount,
-                              targetDate: selectedDate,
-                            );
-                            
-                            print('Create savings pot result: $success');
-                            
-                            if (success) {
-                              // Pop dialog and refresh list
-                              if (dialogContext.mounted) {
-                                Navigator.pop(dialogContext);
-                              }
-                              
-                              // Refresh the list after slight delay
-                              await Future.delayed(const Duration(milliseconds: 300));
-                              await _loadSavingsPots();
-                              
-                              // Show success message
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Savings pot created successfully!'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            } else {
-                              setDialogState(() {
-                                isSubmitting = false;
-                                errorMessage = savingsProvider.errorMessage ??
-                                    'Failed to create savings pot';
-                              });
-                              print('Failed to create pot: ${savingsProvider.errorMessage}');
-                            }
-                          } catch (e) {
-                            print('Exception creating pot: $e');
-                            setDialogState(() {
-                              isSubmitting = false;
-                              errorMessage = 'An error occurred: ${e.toString()}';
-                            });
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: isSubmitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('CREATE'),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
   }
 }

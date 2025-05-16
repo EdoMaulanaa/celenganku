@@ -54,9 +54,11 @@ class TransactionProvider extends ChangeNotifier {
   }
   
   // Set current pot ID
-  void setCurrentPotId(String? potId) {
+  void setCurrentPotId(String? potId, {bool notify = true}) {
     _currentPotId = potId;
-    notifyListeners();
+    if (notify) {
+      notifyListeners();
+    }
   }
   
   // Load all transactions for current user

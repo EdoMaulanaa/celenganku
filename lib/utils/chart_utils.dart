@@ -4,9 +4,6 @@ import '../models/transaction.dart';
 import '../models/transaction_category.dart';
 import '../models/savings_pot.dart';
 
-// Global navigator key for accessing context from static methods
-final navigatorKey = GlobalKey<NavigatorState>();
-
 class ChartUtils {
   /// Generates data for a pie chart showing transaction distribution by category
   static List<PieChartSectionData> generateCategoryPieCharts({
@@ -203,6 +200,7 @@ class ChartUtils {
   static LineChartData generateGoalLineChart({
     required SavingsPot pot,
     required List<Transaction> transactions,
+    Color primaryColor = Colors.blue,
   }) {
     // Return empty chart if no target amount
     if (pot.targetAmount == null || pot.targetAmount == 0) {
@@ -257,11 +255,6 @@ class ChartUtils {
     if (actualSpots.last.x != daysElapsed.toDouble()) {
       actualSpots.add(FlSpot(daysElapsed.toDouble(), cumulativeAmount));
     }
-    
-    // Use a default primary color if context is not available
-    final primaryColor = navigatorKey.currentContext != null
-        ? Theme.of(navigatorKey.currentContext!).colorScheme.primary
-        : Colors.blue;
     
     return LineChartData(
       gridData: FlGridData(

@@ -24,17 +24,25 @@ class _SplashScreenState extends State<SplashScreen> {
   
   // Check authentication status and navigate accordingly
   void checkAuthAndNavigate() {
+    if (!mounted) return;
+    
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
     if (authProvider.status == AuthStatus.authenticated) {
       // Navigate to home screen if authenticated
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(
+          builder: (_) => const HomeScreen(),
+          settings: const RouteSettings(name: '/home'),
+        ),
       );
     } else {
       // Navigate to login screen if not authenticated
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+          settings: const RouteSettings(name: '/login'),
+        ),
       );
     }
   }
