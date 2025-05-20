@@ -79,7 +79,7 @@ class ChartUtils {
       // Get icon for the category
       final iconData = categoryId == 'uncategorized'
           ? Icons.help_outline
-          : _getIconFromName(category!.iconName ?? 'category');
+          : Icons.category;
       
       // Create pie chart section
       sections.add(
@@ -106,33 +106,6 @@ class ChartUtils {
     });
     
     return sections;
-  }
-
-  /// Helper method to get icon data from icon name
-  static IconData _getIconFromName(String iconName) {
-    // Map common icon names to IconData
-    switch (iconName) {
-      case 'food':
-        return Icons.restaurant;
-      case 'transport':
-        return Icons.directions_car;
-      case 'shopping':
-        return Icons.shopping_cart;
-      case 'entertainment':
-        return Icons.movie;
-      case 'bills':
-        return Icons.receipt;
-      case 'health':
-        return Icons.medical_services;
-      case 'education':
-        return Icons.school;
-      case 'travel':
-        return Icons.flight;
-      case 'income':
-        return Icons.account_balance;
-      default:
-        return Icons.category;
-    }
   }
 
   /// Generates bar chart data for monthly savings

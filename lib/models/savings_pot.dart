@@ -5,7 +5,6 @@ class SavingsPot {
   final String userId;
   final String name;
   final String description;
-  final String? iconName;
   final String? thumbnailUrl;
   final double currentBalance;
   final double? targetAmount;
@@ -19,7 +18,6 @@ class SavingsPot {
     required this.userId,
     required this.name,
     required this.description,
-    this.iconName,
     this.thumbnailUrl,
     required this.currentBalance,
     this.targetAmount,
@@ -28,47 +26,6 @@ class SavingsPot {
     required this.updatedAt,
   });
 
-  // Convert iconName to IconData safely
-  IconData get icon {
-    // Default icon
-    const defaultIcon = Icons.savings_outlined;
-    
-    // If iconName is empty or null, return default
-    if (iconName == null || iconName!.isEmpty) {
-      return defaultIcon;
-    }
-    
-    try {
-      // Try parsing the iconName as a code point
-      int codePoint = int.parse(iconName!);
-      // Ensure the fontFamily is MaterialIcons and fontPackage is null for built-in icons
-      return IconData(
-        codePoint, 
-        fontFamily: 'MaterialIcons',
-        matchTextDirection: false,
-      );
-    } catch (e) {
-      // If parsing fails, check if it's a string name of an icon (legacy format)
-      print('Error parsing icon code point: $iconName, error: $e');
-      
-      // For legacy icons stored as string names, try to map to codepoints
-      if (iconName == 'savings_outlined') {
-        return Icons.savings_outlined;
-      } else if (iconName == 'account_balance_outlined') {
-        return Icons.account_balance_outlined;
-      } else if (iconName == 'house_outlined') {
-        return Icons.house_outlined;
-      } else if (iconName == 'directions_car_outlined') {
-        return Icons.directions_car_outlined;
-      } else if (iconName == 'flight_takeoff_outlined') {
-        return Icons.flight_takeoff_outlined;
-      }
-      
-      // Default fallback
-      return defaultIcon;
-    }
-  }
-
   // Create from Supabase JSON
   factory SavingsPot.fromJson(Map<String, dynamic> json) {
     return SavingsPot(
@@ -76,7 +33,6 @@ class SavingsPot {
       userId: json['user_id'],
       name: json['name'],
       description: json['description'] ?? '',
-      iconName: json['icon_name'],
       thumbnailUrl: json['thumbnail_url'],
       currentBalance: (json['current_balance'] ?? 0).toDouble(),
       targetAmount: json['target_amount'] != null 
@@ -96,7 +52,6 @@ class SavingsPot {
       'user_id': userId,
       'name': name,
       'description': description,
-      'icon_name': iconName,
       'thumbnail_url': thumbnailUrl,
       'current_balance': currentBalance,
       'target_amount': targetAmount,
@@ -129,7 +84,6 @@ class SavingsPot {
     String? userId,
     String? name,
     String? description,
-    String? iconName,
     String? thumbnailUrl,
     double? currentBalance,
     double? targetAmount,
@@ -142,7 +96,6 @@ class SavingsPot {
       userId: userId ?? this.userId,
       name: name ?? this.name,
       description: description ?? this.description,
-      iconName: iconName ?? this.iconName,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       currentBalance: currentBalance ?? this.currentBalance,
       targetAmount: targetAmount ?? this.targetAmount,

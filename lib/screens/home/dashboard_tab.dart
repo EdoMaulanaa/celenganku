@@ -16,19 +16,84 @@ class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
 
   @override
-  State<DashboardTab> createState() => _DashboardTabState();
+  State<DashboardTab> createState() => DashboardTabState();
 }
 
-class _DashboardTabState extends State<DashboardTab> {
+class DashboardTabState extends State<DashboardTab> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late List<Animation<Offset>> _slideAnimations = [];
+  late List<Animation<double>> _fadeAnimations = [];
+  
+  final List<GlobalKey> _cardKeys = [
+    GlobalKey(), // Greeting card
+    GlobalKey(), // Total balance card
+    GlobalKey(), // Monthly savings chart
+    GlobalKey(), // Expense breakdown
+    GlobalKey(), // Recent pots
+  ];
+
+  // Reset animation to play again
+  void resetAnimation() {
+    _animationController.reset();
+    _animationController.forward();
+  }
+
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    // Create staggered animations for each card
+    _slideAnimations = List.generate(
+      _cardKeys.length,
+      (index) => Tween<Offset>(
+        begin: const Offset(0, -0.3),
+        end: Offset.zero,
+      ).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(
+            index * 0.1, // Staggered start times
+            0.7 + (index * 0.05), // Overlap end times slightly
+            curve: Curves.easeOutCubic,
+          ),
+        ),
+      ),
+    );
+    
+    _fadeAnimations = List.generate(
+      _cardKeys.length,
+      (index) => Tween<double>(
+        begin: 0,
+        end: 1,
+      ).animate(
+        CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(
+            index * 0.1,
+            0.7 + (index * 0.05),
+            curve: Curves.easeOut,
+          ),
+        ),
+      ),
+    );
+    
     // Refresh data when screen is loaded
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<SavingsProvider>(context, listen: false).loadSavingsPots();
       Provider.of<TransactionProvider>(context, listen: false).loadTransactions();
       Provider.of<CategoryProvider>(context, listen: false).loadCategories();
+      _animationController.forward();
     });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -85,11 +150,19 @@ class _DashboardTabState extends State<DashboardTab> {
   
   // Build greeting card with user info
   Widget _buildGreetingCard(AuthProvider authProvider) {
-    final username = authProvider.profile?.username 
-      ?? authProvider.user?.email?.split('@').first
-      ?? 'User';
-    
-    return Card(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimations[0],
+          child: FadeTransition(
+            opacity: _fadeAnimations[0],
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        key: _cardKeys[0],
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -119,7 +192,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hello, $username',
+                      'Hello, ${authProvider.profile?.username ?? authProvider.user?.email?.split('@').first ?? 'User'}',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -137,6 +210,7 @@ class _DashboardTabState extends State<DashboardTab> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -144,7 +218,19 @@ class _DashboardTabState extends State<DashboardTab> {
   
   // Build total balance card
   Widget _buildTotalBalanceCard(SavingsProvider savingsProvider) {
-    return Card(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimations[1],
+          child: FadeTransition(
+            opacity: _fadeAnimations[1],
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        key: _cardKeys[1],
       margin: EdgeInsets.zero,
       color: Theme.of(context).colorScheme.primary,
       child: Padding(
@@ -196,6 +282,7 @@ class _DashboardTabState extends State<DashboardTab> {
               ],
             ),
           ],
+          ),
         ),
       ),
     );
@@ -203,9 +290,19 @@ class _DashboardTabState extends State<DashboardTab> {
   
   // Build monthly savings chart
   Widget _buildMonthlySavingsChart(TransactionProvider transactionProvider) {
-    final transactions = transactionProvider.transactions;
-    
-    return Card(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimations[2],
+          child: FadeTransition(
+            opacity: _fadeAnimations[2],
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        key: _cardKeys[2],
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -230,7 +327,7 @@ class _DashboardTabState extends State<DashboardTab> {
             const SizedBox(height: 24),
             SizedBox(
               height: 200,
-              child: transactions.isEmpty
+                child: transactionProvider.transactions.isEmpty
                   ? const Center(
                       child: Text(
                         'No transaction data available',
@@ -241,7 +338,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
                         barGroups: ChartUtils.generateMonthlySavingsBarChart(
-                          transactions: transactions,
+                            transactions: transactionProvider.transactions,
                           numberOfMonths: 6,
                         ),
                         titlesData: FlTitlesData(
@@ -288,6 +385,7 @@ class _DashboardTabState extends State<DashboardTab> {
                     ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -295,10 +393,19 @@ class _DashboardTabState extends State<DashboardTab> {
   
   // Build expense breakdown chart
   Widget _buildExpenseBreakdownChart(TransactionProvider transactionProvider, CategoryProvider categoryProvider) {
-    final transactions = transactionProvider.transactions;
-    final categories = categoryProvider.allCategories;
-    
-    return Card(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimations[3],
+          child: FadeTransition(
+            opacity: _fadeAnimations[3],
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        key: _cardKeys[3],
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -323,7 +430,7 @@ class _DashboardTabState extends State<DashboardTab> {
             const SizedBox(height: 24),
             SizedBox(
               height: 240,
-              child: transactions.isEmpty
+                child: transactionProvider.transactions.isEmpty
                   ? const Center(
                       child: Text(
                         'No expense data available',
@@ -333,8 +440,8 @@ class _DashboardTabState extends State<DashboardTab> {
                   : PieChart(
                       PieChartData(
                         sections: ChartUtils.generateCategoryPieCharts(
-                          transactions: transactions,
-                          categories: categories,
+                            transactions: transactionProvider.transactions,
+                            categories: categoryProvider.allCategories,
                           type: TransactionType.expense,
                           radius: 100,
                         ),
@@ -346,6 +453,7 @@ class _DashboardTabState extends State<DashboardTab> {
             const SizedBox(height: 16),
             _buildCategoryLegend(transactionProvider, categoryProvider, TransactionType.expense),
           ],
+          ),
         ),
       ),
     );
@@ -449,9 +557,19 @@ class _DashboardTabState extends State<DashboardTab> {
   
   // Build recent pots section
   Widget _buildRecentPotsSection(SavingsProvider savingsProvider) {
-    final pots = savingsProvider.savingsPots;
-    
-    return Column(
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return SlideTransition(
+          position: _slideAnimations[4],
+          child: FadeTransition(
+            opacity: _fadeAnimations[4],
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        key: _cardKeys[4],
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Section title
@@ -490,18 +608,19 @@ class _DashboardTabState extends State<DashboardTab> {
               child: CircularProgressIndicator(),
             ),
           )
-        else if (pots.isEmpty)
+          else if (savingsProvider.savingsPots.isEmpty)
           _buildEmptyState()
         else
           ListView.builder(
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
-            itemCount: pots.length > 3 ? 3 : pots.length,
+              itemCount: savingsProvider.savingsPots.length > 3 ? 3 : savingsProvider.savingsPots.length,
             itemBuilder: (context, index) {
-              return _buildPotCard(pots[index]);
+                return _buildPotCard(savingsProvider.savingsPots[index]);
             },
           ),
       ],
+      ),
     );
   }
   
@@ -524,30 +643,9 @@ class _DashboardTabState extends State<DashboardTab> {
                     color: Theme.of(context).colorScheme.primaryContainer,
                     shape: BoxShape.circle,
                   ),
-                  child: Builder(
-                    builder: (context) {
-                      try {
-                        // First check if icon name is valid
-                        if (pot.iconName == null || pot.iconName!.isEmpty) {
-                          return Icon(
-                            Icons.savings_outlined,
-                            color: Theme.of(context).colorScheme.primary,
-                          );
-                        }
-                        
-                        // Try to create the icon from code point
-                        return Icon(
-                          pot.icon,
-                          color: Theme.of(context).colorScheme.primary,
-                        );
-                      } catch (e) {
-                        print('Dashboard: Error rendering icon: $e');
-                        return Icon(
+                  child: Icon(
                           Icons.savings_outlined,
                           color: Theme.of(context).colorScheme.primary,
-                        );
-                      }
-                    },
                   ),
                 ),
                 

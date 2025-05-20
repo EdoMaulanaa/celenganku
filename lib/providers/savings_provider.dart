@@ -45,54 +45,6 @@ class SavingsProvider extends ChangeNotifier {
       
       _savingsPots = await _supabaseService.getSavingsPots();
       
-      // Verify and fix any invalid iconName values
-      bool hasInvalidIcons = false;
-      for (int i = 0; i < _savingsPots.length; i++) {
-        final pot = _savingsPots[i];
-        
-        // Check for string icon names (old format) or invalid entries
-        bool needsUpdate = false;
-        String? newIconName;
-        
-        if (pot.iconName == null || pot.iconName!.isEmpty) {
-          // Missing icon - assign default
-          newIconName = Icons.savings_outlined.codePoint.toString();
-          needsUpdate = true;
-        } else if (pot.iconName == 'savings_outlined') {
-          // Legacy string format - update to code point
-          newIconName = Icons.savings_outlined.codePoint.toString();
-          needsUpdate = true;
-        } else {
-          // Try to parse the icon code point to verify it's valid
-          try {
-            int.parse(pot.iconName!);
-            // Valid code point, no update needed
-          } catch (e) {
-            // Invalid code point - assign default
-            newIconName = Icons.savings_outlined.codePoint.toString();
-            needsUpdate = true;
-          }
-        }
-        
-        if (needsUpdate) {
-          hasInvalidIcons = true;
-          // Update the pot with a valid icon code point
-          final fixedPot = pot.copyWith(
-            iconName: newIconName,
-          );
-          
-          // Update in database
-          await _supabaseService.updateSavingsPot(fixedPot);
-          
-          // Update in local list
-          _savingsPots[i] = fixedPot;
-        }
-      }
-      
-      if (hasInvalidIcons) {
-        print('Fixed invalid icons in savings pots');
-      }
-      
       _status = SavingsStatus.loaded;
       notifyListeners();
     } catch (e) {
@@ -149,19 +101,12 @@ class SavingsProvider extends ChangeNotifier {
       
       final now = DateTime.now();
       
-      // Use the numeric code point of Icons.savings_outlined instead of the string name
-      // For Icons.savings_outlined, we use its code point as a string
-      final defaultIconCodePoint = Icons.savings_outlined.codePoint.toString();
-      
-      print('Creating savings pot: Name=$name, IconName=${iconName ?? defaultIconCodePoint}');
-      
       // Create the new pot
       final newPot = SavingsPot(
         id: '', // Let Supabase generate the UUID
         userId: userId,
         name: name.trim(),
         description: description.trim(),
-        iconName: iconName ?? defaultIconCodePoint,
         thumbnailUrl: thumbnailUrl,
         currentBalance: 0, // Start with zero balance
         targetAmount: targetAmount,
@@ -225,7 +170,6 @@ class SavingsProvider extends ChangeNotifier {
       final updatedPot = currentPot.copyWith(
         name: name,
         description: description,
-        iconName: iconName,
         thumbnailUrl: thumbnailUrl,
         targetAmount: targetAmount,
         targetDate: targetDate,

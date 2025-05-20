@@ -8,17 +8,38 @@ class TransactionsTab extends StatefulWidget {
   const TransactionsTab({super.key});
 
   @override
-  State<TransactionsTab> createState() => _TransactionsTabState();
+  State<TransactionsTab> createState() => TransactionsTabState();
 }
 
-class _TransactionsTabState extends State<TransactionsTab> {
+class TransactionsTabState extends State<TransactionsTab> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
+  late AnimationController _animationController;
   
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
     // Using Future.microtask to ensure this doesn't run during build phase
-    Future.microtask(() => _loadTransactions());
+    Future.microtask(() {
+      _loadTransactions();
+      _animationController.forward();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+  
+  // Method to reset animation when returning to this tab
+  void resetAnimation() {
+    _animationController.reset();
+    _animationController.forward();
   }
   
   Future<void> _loadTransactions() async {
@@ -35,6 +56,9 @@ class _TransactionsTabState extends State<TransactionsTab> {
     setState(() {
       _isLoading = false;
     });
+    
+    // Start animation after loading
+    _animationController.forward();
   }
 
   @override
@@ -47,14 +71,21 @@ class _TransactionsTabState extends State<TransactionsTab> {
           // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadTransactions,
+            onPressed: () {
+              _loadTransactions();
+              _animationController.reset();
+            },
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadTransactions,
+              onRefresh: () async {
+                await _loadTransactions();
+                _animationController.reset();
+                _animationController.forward();
+              },
               child: _buildTransactionsList(),
             ),
     );
@@ -66,7 +97,106 @@ class _TransactionsTabState extends State<TransactionsTab> {
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
     
     if (transactions.isEmpty) {
-      return Center(
+      return _buildEmptyState();
+    }
+    
+    return ListView.builder(
+      itemCount: transactions.length,
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        final transaction = transactions[index];
+        
+        // Create staggered animation for each item
+        final animation = Tween<Offset>(
+          begin: const Offset(0, -0.3),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              index < 20 ? (index * 0.05).clamp(0.0, 0.9) : 0.9, // First 20 items staggered, rest together
+              index < 20 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+        );
+        
+        final fadeAnim = Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              index < 20 ? (index * 0.05).clamp(0.0, 0.9) : 0.9,
+              index < 20 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+              curve: Curves.easeOut,
+            ),
+          ),
+        );
+        
+        return SlideTransition(
+          position: animation,
+          child: FadeTransition(
+            opacity: fadeAnim,
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                leading: CircleAvatar(
+                  backgroundColor: transaction.type == TransactionType.income
+                      ? Colors.green[100]
+                      : Colors.red[100],
+                  child: Icon(
+                    transaction.type == TransactionType.income
+                        ? Icons.arrow_downward
+                        : Icons.arrow_upward,
+                    color: transaction.type == TransactionType.income
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+                title: Text(
+                  transaction.notes ?? 'Transaction',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: Text(
+                  DateFormat('MMM dd, yyyy').format(transaction.date),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                trailing: Text(
+                  (transaction.type == TransactionType.income ? '+ ' : '- ') +
+                      currencyFormat.format(transaction.amount),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: transaction.type == TransactionType.income
+                        ? Colors.green
+                        : Colors.red,
+                  ),
+                ),
+                onTap: () => _showTransactionDetails(transaction),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildEmptyState() {
+    final fadeAnim = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+    
+    return FadeTransition(
+      opacity: fadeAnim,
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -92,58 +222,7 @@ class _TransactionsTabState extends State<TransactionsTab> {
             ),
           ],
         ),
-      );
-    }
-    
-    return ListView.builder(
-      itemCount: transactions.length,
-      padding: const EdgeInsets.all(16),
-      itemBuilder: (context, index) {
-        final transaction = transactions[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              backgroundColor: transaction.type == TransactionType.income
-                  ? Colors.green[100]
-                  : Colors.red[100],
-              child: Icon(
-                transaction.type == TransactionType.income
-                    ? Icons.arrow_downward
-                    : Icons.arrow_upward,
-                color: transaction.type == TransactionType.income
-                    ? Colors.green
-                    : Colors.red,
-              ),
-            ),
-            title: Text(
-              transaction.notes ?? 'Transaction',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              DateFormat('MMM dd, yyyy').format(transaction.date),
-              style: TextStyle(
-                color: Colors.grey[600],
-              ),
-            ),
-            trailing: Text(
-              (transaction.type == TransactionType.income ? '+ ' : '- ') +
-                  currencyFormat.format(transaction.amount),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: transaction.type == TransactionType.income
-                    ? Colors.green
-                    : Colors.red,
-              ),
-            ),
-            onTap: () => _showTransactionDetails(transaction),
-          ),
-        );
-      },
+      ),
     );
   }
   

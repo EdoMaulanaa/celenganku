@@ -18,8 +18,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   
-  // Reference to the Savings Pot Tab to call its methods
+  // Reference to tab keys to call their methods
   final GlobalKey<SavingsPotTabState> _savingsPotTabKey = GlobalKey<SavingsPotTabState>();
+  final GlobalKey<DashboardTabState> _dashboardTabKey = GlobalKey<DashboardTabState>();
+  final GlobalKey<TransactionsTabState> _transactionsTabKey = GlobalKey<TransactionsTabState>();
+  final GlobalKey<ProfileTabState> _profileTabKey = GlobalKey<ProfileTabState>();
   
   // List of tab screens
   late final List<Widget> _tabs;
@@ -27,12 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize tabs with the key for SavingsPotTab
+    // Initialize tabs with the keys
     _tabs = [
-      const DashboardTab(),
+      DashboardTab(key: _dashboardTabKey),
       SavingsPotTab(key: _savingsPotTabKey),
-      const TransactionsTab(),
-      const ProfileTab(),
+      TransactionsTab(key: _transactionsTabKey),
+      ProfileTab(key: _profileTabKey),
     ];
   }
   
@@ -71,9 +74,27 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          // Only process if we're actually changing tabs
+          if (index != _currentIndex) {
           setState(() {
+              // Restart animations when navigating to a tab
+              switch (index) {
+                case 0:
+                  _dashboardTabKey.currentState?.resetAnimation();
+                  break;
+                case 1:
+                  _savingsPotTabKey.currentState?.resetAnimation();
+                  break;
+                case 2:
+                  _transactionsTabKey.currentState?.resetAnimation();
+                  break;
+                case 3:
+                  _profileTabKey.currentState?.resetAnimation();
+                  break;
+              }
             _currentIndex = index;
           });
+          }
         },
         type: BottomNavigationBarType.fixed,
         items: const [
@@ -99,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ? FloatingActionButton(
               onPressed: () {
                 // Directly show the create pot dialog using the public method
-                print("Home screen FAB pressed");
                 _savingsPotTabKey.currentState?.showCreatePotDialog();
               },
               heroTag: 'createPotFAB',

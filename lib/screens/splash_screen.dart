@@ -11,13 +11,29 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
-    
-    // Start auth check without delay
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
+    _controller.forward();
     _checkAuthAndNavigate();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
   
   // Check authentication status and navigate accordingly
@@ -71,7 +87,17 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App logo or icon
+            // Animated piggy bank logo and app name as a group
+            AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: child,
+                );
+              },
+              child: Column(
+                children: [
             Container(
               width: 120,
               height: 120,
@@ -85,10 +111,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            
             const SizedBox(height: 24),
-            
-            // App name
             const Text(
               'Celenganku',
               style: TextStyle(
@@ -97,23 +120,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
               ),
             ),
-            
-            const SizedBox(height: 8),
-            
-            // Tag line
-            const Text(
-              'Manage your savings wisely',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
+                ],
               ),
-            ),
-            
-            const SizedBox(height: 48),
-            
-            // Loading indicator
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           ],
         ),

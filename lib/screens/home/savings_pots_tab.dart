@@ -14,14 +14,35 @@ class SavingsPotTab extends StatefulWidget {
   State<SavingsPotTab> createState() => SavingsPotTabState();
 }
 
-class SavingsPotTabState extends State<SavingsPotTab> {
+class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
+  late AnimationController _animationController;
   
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
     // Using Future.microtask to ensure this doesn't run during build phase
-    Future.microtask(() => _loadSavingsPots());
+    Future.microtask(() {
+      _loadSavingsPots();
+      _animationController.forward();
+    });
+  }
+  
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+  
+  // Method to reset animation when returning to this tab
+  void resetAnimation() {
+    _animationController.reset();
+    _animationController.forward();
   }
   
   Future<void> _loadSavingsPots() async {
@@ -38,6 +59,9 @@ class SavingsPotTabState extends State<SavingsPotTab> {
     setState(() {
       _isLoading = false;
     });
+    
+    // Start animation after loading
+    _animationController.forward();
   }
 
   @override
@@ -50,14 +74,21 @@ class SavingsPotTabState extends State<SavingsPotTab> {
           // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadSavingsPots,
+            onPressed: () {
+              _loadSavingsPots();
+              _animationController.reset();
+            },
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadSavingsPots,
+              onRefresh: () async {
+                await _loadSavingsPots();
+                _animationController.reset();
+                _animationController.forward();
+              },
               child: _buildSavingsPotsList(),
             ),
     );
@@ -69,43 +100,57 @@ class SavingsPotTabState extends State<SavingsPotTab> {
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
     
     if (pots.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.savings_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No savings pots yet',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Create a pot to start saving',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: showCreatePotDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Create New Pot'),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState();
     }
     
     return ListView.builder(
-              itemCount: pots.length,        padding: const EdgeInsets.all(16),        itemBuilder: (context, index) {          final pot = pots[index];          return Card(            margin: const EdgeInsets.only(bottom: 16),            child: InkWell(              onTap: () => Navigator.of(context).push(                MaterialPageRoute(                  builder: (context) => PotDetailsScreen(potId: pot.id),                ),              ),              borderRadius: BorderRadius.circular(12),
+      itemCount: pots.length,
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        final pot = pots[index];
+        
+        // Create staggered animation for each item
+        final animation = Tween<Offset>(
+          begin: const Offset(0, -0.3),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9, // First 15 items staggered, rest together
+              index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+              curve: Curves.easeOutCubic,
+              ),
+            ),
+        );
+        
+        final fadeAnim = Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Interval(
+              index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9,
+              index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+              curve: Curves.easeOut,
+            ),
+        ),
+      );
+        
+        return SlideTransition(
+          position: animation,
+          child: FadeTransition(
+            opacity: fadeAnim,
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PotDetailsScreen(potId: pot.id),
+                  ),
+                ),
+                borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -114,36 +159,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                   // Title and icon
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        child: Builder(
-                          builder: (context) {
-                            try {
-                              // First check if icon name is valid
-                              if (pot.iconName == null || pot.iconName!.isEmpty) {
-                                return Icon(
-                                  Icons.savings_outlined,
-                                  color: Theme.of(context).colorScheme.primary,
-                                );
-                              }
-                              
-                              // Try to create the icon from code point
-                              return Icon(
-                                pot.icon,
-                                color: Theme.of(context).colorScheme.primary,
-                              );
-                            } catch (e) {
-                              print('Error rendering icon: $e');
-                              // Fall back to default icon
-                              return Icon(
-                                Icons.savings_outlined,
-                                color: Theme.of(context).colorScheme.primary,
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           pot.name,
@@ -214,11 +229,57 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                     ),
                   ],
                 ],
+                  ),
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+  
+  Widget _buildEmptyState() {
+    final fadeAnim = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    );
+    
+    return FadeTransition(
+      opacity: fadeAnim,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.savings_outlined,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No savings pots yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Create a pot to start saving',
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: showCreatePotDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Create New Pot'),
+            ),
+          ],
+        ),
+      ),
     );
   }
   
@@ -265,39 +326,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                     // Pot name and icon
                     Row(
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Builder(
-                            builder: (context) {
-                              try {
-                                // First check if icon name is valid
-                                if (pot.iconName == null || pot.iconName!.isEmpty) {
-                                  return Icon(
-                                    Icons.savings_outlined,
-                                    color: Theme.of(context).colorScheme.primary,
-                                    size: 24,
-                                  );
-                                }
-                                
-                                // Try to create the icon from code point
-                                return Icon(
-                                  pot.icon,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  size: 24,
-                                );
-                              } catch (e) {
-                                print('PotDetails Modal: Error rendering icon: $e');
-                                return Icon(
-                                  Icons.savings_outlined,
-                                  color: Theme.of(context).colorScheme.primary,
-                                  size: 24,
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -863,7 +891,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
     DateTime? selectedDate = pot.targetDate;
     bool isSubmitting = false;
     String? errorMessage;
-    String selectedIconCodePoint = pot.iconName ?? Icons.savings_outlined.codePoint.toString();
     
     showDialog(
       context: context,
@@ -890,74 +917,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                           ),
                         ),
                       ),
-                    
-                    // Icon selection
-                    Row(
-                      children: [
-                        const Text(
-                          'Icon:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        GestureDetector(
-                          onTap: () => _showIconSelectionDialog(
-                            context,
-                            selectedIconCodePoint,
-                            (String newIconCodePoint) {
-                              setDialogState(() {
-                                selectedIconCodePoint = newIconCodePoint;
-                              });
-                            },
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Builder(
-                              builder: (context) {
-                                try {
-                                  return Icon(
-                                    IconData(
-                                      int.parse(selectedIconCodePoint),
-                                      fontFamily: 'MaterialIcons',
-                                    ),
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  );
-                                } catch (e) {
-                                  print('Error rendering selected icon: $e');
-                                  return Icon(
-                                    Icons.savings_outlined,
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => _showIconSelectionDialog(
-                            context,
-                            selectedIconCodePoint,
-                            (String newIconCodePoint) {
-                              setDialogState(() {
-                                selectedIconCodePoint = newIconCodePoint;
-                              });
-                            },
-                          ),
-                          child: const Text('Change'),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16),
                     
                     // Name field
                     TextField(
@@ -1093,7 +1052,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                               id: pot.id,
                               name: nameController.text.trim(),
                               description: descriptionController.text.trim(),
-                              iconName: selectedIconCodePoint,
                               targetAmount: targetAmount,
                               targetDate: selectedDate,
                             );
@@ -1156,148 +1114,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
     );
   }
   
-  void _showIconSelectionDialog(
-    BuildContext context, 
-    String currentIconCodePoint,
-    Function(String) onIconSelected
-  ) {
-    // List of commonly used Material icons for savings
-    final List<IconData> icons = [
-      // Finance related
-      Icons.savings_outlined,
-      Icons.account_balance_outlined,
-      Icons.account_balance_wallet_outlined,
-      Icons.attach_money,
-      Icons.credit_card_outlined,
-      Icons.payment_outlined,
-      Icons.currency_exchange_outlined,
-      
-      // Shopping related
-      Icons.shopping_bag_outlined,
-      Icons.shopping_cart_outlined,
-      Icons.store_outlined,
-      Icons.redeem_outlined,
-      Icons.card_giftcard_outlined,
-      
-      // Home and living
-      Icons.house_outlined,
-      Icons.home_outlined,
-      Icons.apartment_outlined,
-      Icons.chair_outlined,
-      Icons.bed_outlined,
-      Icons.kitchen_outlined,
-      
-      // Travel and transportation
-      Icons.directions_car_outlined,
-      Icons.flight_takeoff_outlined,
-      Icons.beach_access_outlined,
-      Icons.hotel_outlined,
-      Icons.luggage_outlined,
-      Icons.map_outlined,
-      
-      // Education
-      Icons.school_outlined,
-      Icons.book_outlined,
-      Icons.auto_stories_outlined,
-      
-      // Health and wellness
-      Icons.health_and_safety_outlined,
-      Icons.medical_services_outlined,
-      Icons.fitness_center_outlined,
-      Icons.spa_outlined,
-      
-      // Technology
-      Icons.phone_android_outlined,
-      Icons.laptop_outlined,
-      Icons.computer_outlined,
-      Icons.headphones_outlined,
-      Icons.camera_alt_outlined,
-      Icons.sports_esports_outlined,
-      
-      // Family and lifestyle
-      Icons.family_restroom,
-      Icons.people_outline,
-      Icons.child_care_outlined,
-      Icons.pets_outlined,
-      
-      // Food and dining
-      Icons.restaurant_outlined,
-      Icons.local_cafe_outlined,
-      Icons.bakery_dining_outlined,
-      Icons.emoji_food_beverage_outlined,
-      
-      // Miscellaneous
-      Icons.celebration_outlined,
-      Icons.favorite_outline,
-      Icons.star_outline,
-      Icons.flag_outlined,
-      Icons.emoji_emotions_outlined,
-      Icons.emoji_nature_outlined,
-      Icons.account_circle_outlined,
-      Icons.sports_basketball_outlined,
-    ];
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Icon'),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          height: MediaQuery.of(context).size.height * 0.5,
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              childAspectRatio: 1,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-            ),
-            itemCount: icons.length,
-            itemBuilder: (context, index) {
-              final IconData icon = icons[index];
-              final bool isSelected = icon.codePoint.toString() == currentIconCodePoint;
-              
-              return InkWell(
-                onTap: () {
-                  onIconSelected(icon.codePoint.toString());
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected 
-                        ? Theme.of(context).colorScheme.primaryContainer 
-                        : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: isSelected
-                        ? Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          )
-                        : null,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      icon,
-                      size: 32,
-                      color: isSelected
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey[800],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CANCEL'),
-          ),
-        ],
-      ),
-    );
-  }
-  
   void showCreatePotDialog() {
     print("Show create pot dialog triggered");
     
@@ -1315,7 +1131,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
     DateTime? selectedDate;
     bool isSubmitting = false;
     String? errorMessage;
-    String selectedIconCodePoint = Icons.savings_outlined.codePoint.toString();
     
     showDialog(
       context: context,
@@ -1344,74 +1159,6 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                           ),
                         ),
                       ),
-                    
-                    // Icon selection
-                    Row(
-                      children: [
-                        const Text(
-                          'Icon:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        GestureDetector(
-                          onTap: () => _showIconSelectionDialog(
-                            context,
-                            selectedIconCodePoint,
-                            (String newIconCodePoint) {
-                              setDialogState(() {
-                                selectedIconCodePoint = newIconCodePoint;
-                              });
-                            },
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Builder(
-                              builder: (context) {
-                                try {
-                                  return Icon(
-                                    IconData(
-                                      int.parse(selectedIconCodePoint),
-                                      fontFamily: 'MaterialIcons',
-                                    ),
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  );
-                                } catch (e) {
-                                  print('Error rendering selected icon: $e');
-                                  return Icon(
-                                    Icons.savings_outlined,
-                                    size: 28,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () => _showIconSelectionDialog(
-                            context,
-                            selectedIconCodePoint,
-                            (String newIconCodePoint) {
-                              setDialogState(() {
-                                selectedIconCodePoint = newIconCodePoint;
-                              });
-                            },
-                          ),
-                          child: const Text('Change'),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 16),
                     
                     // Name field
                     TextField(
@@ -1551,14 +1298,12 @@ class SavingsPotTabState extends State<SavingsPotTab> {
                             
                             print('Attempting to create pot: ${nameController.text.trim()}');
                             print('Description: ${descriptionController.text.trim()}');
-                            print('Icon: $selectedIconCodePoint');
                             print('Target Amount: $targetAmount');
                             print('Target Date: $selectedDate');
                             
                             final success = await savingsProvider.createSavingsPot(
                               name: nameController.text.trim(),
                               description: descriptionController.text.trim(),
-                              iconName: selectedIconCodePoint,
                               targetAmount: targetAmount,
                               targetDate: selectedDate,
                             );
