@@ -21,6 +21,12 @@ class SavingsProvider extends ChangeNotifier {
   List<SavingsPot> _savingsPots = [];
   List<SavingsPot> get savingsPots => _savingsPots;
   
+  // For search results
+  List<SavingsPot> _searchResults = [];
+  List<SavingsPot> get searchResults => _searchResults;
+  bool _isSearching = false;
+  bool get isSearching => _isSearching;
+  
   // Stream subscription
   StreamSubscription<List<SavingsPot>>? _savingsPotSubscription;
   
@@ -69,6 +75,12 @@ class SavingsProvider extends ChangeNotifier {
             (updatedPots) {
               _savingsPots = updatedPots;
               _status = SavingsStatus.loaded;
+              
+              // If searching, reapply search filter
+              if (_isSearching) {
+                _applySearchFilter();
+              }
+              
               notifyListeners();
               print('Savings pots updated: ${_savingsPots.length}');
             },
@@ -84,6 +96,49 @@ class SavingsProvider extends ChangeNotifier {
       _errorMessage = 'Failed to load savings pots: ${e.toString()}';
       notifyListeners();
     }
+  }
+  
+  // Search for savings pots
+  Future<void> searchSavingsPots(String query) async {
+    if (query.trim().isEmpty) {
+      // If query is empty, clear search results
+      _isSearching = false;
+      _searchResults = [];
+      notifyListeners();
+      return;
+    }
+    
+    try {
+      _status = SavingsStatus.loading;
+      _isSearching = true;
+      notifyListeners();
+      
+      _searchResults = await _supabaseService.searchSavingsPots(query);
+      
+      _status = SavingsStatus.loaded;
+      notifyListeners();
+    } catch (e) {
+      _status = SavingsStatus.error;
+      _errorMessage = 'Failed to search savings pots: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+  
+  // Clear search and show all pots
+  void clearSearch() {
+    _isSearching = false;
+    _searchResults = [];
+    notifyListeners();
+  }
+  
+  // Apply search filter to existing pots (used when new data comes in during search)
+  void _applySearchFilter() {
+    if (_searchResults.isEmpty || _savingsPots.isEmpty) return;
+    
+    final searchIds = _searchResults.map((pot) => pot.id).toSet();
+    _searchResults = _savingsPots
+        .where((pot) => searchIds.contains(pot.id))
+        .toList();
   }
   
   // Get a specific savings pot by ID

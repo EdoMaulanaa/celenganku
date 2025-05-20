@@ -187,6 +187,22 @@ class SupabaseService {
         .toList();
   }
   
+  // Search savings pots by name
+  Future<List<SavingsPot>> searchSavingsPots(String searchQuery) async {
+    if (currentUser == null) return [];
+    
+    final response = await client
+        .from('savings_pots')
+        .select()
+        .eq('user_id', currentUser!.id)
+        .ilike('name', '%$searchQuery%')
+        .order('created_at');
+    
+    return (response as List)
+        .map((pot) => SavingsPot.fromJson(pot))
+        .toList();
+  }
+  
   // Get a specific savings pot by id
   Future<SavingsPot?> getSavingsPot(String id) async {
     try {

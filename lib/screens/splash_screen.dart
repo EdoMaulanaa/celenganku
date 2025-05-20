@@ -98,29 +98,42 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               },
               child: Column(
                 children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                Icons.savings_outlined,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Celenganku',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      Icons.savings_outlined,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Celenganku',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ],
+              ),
+            ),
+            
+            // Tambahkan jarak antara teks dan loading
+            const SizedBox(height: 40),
+            
+            // Loading indicator
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 3,
               ),
             ),
           ],

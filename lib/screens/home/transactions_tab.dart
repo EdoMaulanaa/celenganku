@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/savings_provider.dart';
 import '../../models/transaction.dart';
 
 class TransactionsTab extends StatefulWidget {
@@ -253,6 +254,29 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
             ),
             
             const SizedBox(height: 24),
+            
+            // Savings pot name
+            Row(
+              children: [
+                Icon(Icons.savings_outlined, color: Colors.grey),
+                const SizedBox(width: 12),
+                const Text('Savings Pot:', style: TextStyle(color: Colors.grey)),
+                const Spacer(),
+                Consumer<SavingsProvider>(
+                  builder: (context, savingsProvider, _) {
+                    final pot = savingsProvider.getSavingsPotById(transaction.savingsPotId);
+                    return Text(
+                      pot?.name ?? 'Unknown Pot',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            
+            const Divider(height: 24),
             
             // Type
             Row(

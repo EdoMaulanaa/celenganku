@@ -19,6 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  String? _emailError;
+  String? _passwordError;
 
   @override
   void dispose() {
@@ -29,6 +31,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Handle login
   Future<void> _login() async {
+    // Reset previous errors
+    setState(() {
+      _emailError = null;
+      _passwordError = null;
+    });
+    
     // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
@@ -55,13 +63,37 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else if (mounted) {
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Failed to sign in'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      // Analisis pesan error untuk menentukan field yang bermasalah
+      final errorMessage = authProvider.errorMessage?.toLowerCase() ?? 'failed to sign in';
+      
+      setState(() {
+        // Periksa apakah ada kata kunci yang menunjukkan masalah email
+        final isEmailError = errorMessage.contains('email') || 
+                             errorMessage.contains('not found') || 
+                             errorMessage.contains('tidak terdaftar');
+        
+        // Periksa apakah ada kata kunci yang menunjukkan masalah password
+        final isPasswordError = errorMessage.contains('password') || 
+                                errorMessage.contains('credentials') || 
+                                errorMessage.contains('invalid login') ||
+                                errorMessage.contains('invalid_credentials');
+        
+        // Tentukan field yang akan menampilkan error
+        if (isEmailError && isPasswordError) {
+          // Jika error menunjukkan kedua field bermasalah, tampilkan di keduanya
+          _emailError = 'Email atau password salah';
+          _passwordError = 'Email atau password salah';
+        } else if (isEmailError) {
+          // Jika hanya email yang bermasalah
+          _emailError = 'Email tidak ditemukan';
+        } else if (isPasswordError) {
+          // Jika hanya password yang bermasalah
+          _passwordError = 'Password salah';
+        } else {
+          // Default fallback jika tidak bisa menentukan field spesifik
+          _passwordError = 'Login gagal, silakan coba lagi';
+        }
+      });
     }
   }
 
@@ -140,14 +172,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Email field
                   TextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Email',
                       hintText: 'Enter your email',
-                      prefixIcon: Icon(Icons.email_outlined),
+                      errorText: _emailError,
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      errorStyle: const TextStyle(color: Colors.red),
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: Validator.validateEmail,
                     textInputAction: TextInputAction.next,
+                    onChanged: (value) {
+                      if (_emailError != null) {
+                        setState(() {
+                          _emailError = null;
+                        });
+                      }
+                    },
                   ),
                   
                   const SizedBox(height: 16),
@@ -158,7 +199,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Enter your password',
+                      errorText: _passwordError,
                       prefixIcon: const Icon(Icons.lock_outlined),
+                      errorStyle: const TextStyle(color: Colors.red),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
@@ -176,6 +219,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: Validator.validatePassword,
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _login(),
+                    onChanged: (value) {
+                      if (_passwordError != null) {
+                        setState(() {
+                          _passwordError = null;
+                        });
+                      }
+                    },
                   ),
                   
                   // Forgot password button

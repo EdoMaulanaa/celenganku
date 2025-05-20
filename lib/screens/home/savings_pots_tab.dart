@@ -17,6 +17,9 @@ class SavingsPotTab extends StatefulWidget {
 class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   late AnimationController _animationController;
+  final TextEditingController _searchController = TextEditingController();
+  bool _showSearchField = false;
+  final FocusNode _searchFocusNode = FocusNode();
   
   @override
   void initState() {
@@ -31,12 +34,51 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
       _loadSavingsPots();
       _animationController.forward();
     });
+    
+    // Add listener to search controller
+    _searchController.addListener(_onSearchChanged);
   }
   
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+  
+  // Handle search text changes
+  void _onSearchChanged() {
+    if (!mounted) return;  // Check if widget is still mounted
+    
+    final query = _searchController.text.trim();
+    
+    // Debounce search queries
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;  // Check again after delay
+      if (query == _searchController.text.trim()) {
+        final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+        
+        // Store current search state to detect changes
+        final wasSearching = savingsProvider.isSearching;
+        final previousResultCount = wasSearching ? savingsProvider.searchResults.length : 0;
+        
+        if (query.isEmpty) {
+          savingsProvider.clearSearch();
+        } else {
+          savingsProvider.searchSavingsPots(query);
+        }
+        
+        // Reset animation only if search state or results count changed
+        if (!wasSearching != !savingsProvider.isSearching || 
+            (savingsProvider.isSearching && 
+             previousResultCount != savingsProvider.searchResults.length)) {
+          _animationController.reset();
+          _animationController.forward();
+        }
+      }
+    });
   }
   
   // Method to reset animation when returning to this tab
@@ -68,9 +110,40 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Savings Pots'),
+        title: _showSearchField
+            ? TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search pots...',
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+                ),
+                style: const TextStyle(fontSize: 16),
+              )
+            : const Text('Savings Pots'),
         elevation: 0,
         actions: [
+          // Search button
+          IconButton(
+            icon: Icon(_showSearchField ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                _showSearchField = !_showSearchField;
+                if (_showSearchField) {
+                  // Focus the search field after showing it
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    _searchFocusNode.requestFocus();
+                  });
+                } else {
+                  _searchController.clear();
+                  Provider.of<SavingsProvider>(context, listen: false)
+                      .clearSearch();
+                }
+              });
+            },
+          ),
           // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -96,8 +169,26 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
   
   Widget _buildSavingsPotsList() {
     final savingsProvider = Provider.of<SavingsProvider>(context);
-    final pots = savingsProvider.savingsPots;
+    final isSearching = savingsProvider.isSearching;
+    final pots = isSearching ? savingsProvider.searchResults : savingsProvider.savingsPots;
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
+    
+    if (isSearching && pots.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(
+              'No pots found matching "${_searchController.text}"',
+              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
     
     if (pots.isEmpty) {
       return _buildEmptyState();
@@ -276,6 +367,20 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
               onPressed: showCreatePotDialog,
               icon: const Icon(Icons.add),
               label: const Text('Create New Pot'),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _showSearchField = true;
+                  // Focus the search field after showing it
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    _searchFocusNode.requestFocus();
+                  });
+                });
+              },
+              icon: const Icon(Icons.search),
+              label: const Text('Search Pots'),
             ),
           ],
         ),
