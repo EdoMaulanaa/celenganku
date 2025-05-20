@@ -1,16 +1,32 @@
-# celenganku
+# Celenganku - Aplikasi Manajemen Tabungan
 
-A new Flutter project.
+Celenganku adalah aplikasi mobile berbasis Flutter yang membantu pengguna mengelola tabungan dan mengatur keuangan pribadi dengan lebih efektif.
 
-## Getting Started
+## Fitur Utama
 
-This project is a starting point for a Flutter application.
+- **Dashboard Keuangan**: Visualisasi saldo total dan grafik pengeluaran
+- **Savings Pots**: Buat dan kelola pot tabungan untuk berbagai tujuan
+- **Transaksi**: Lacak pemasukan dan pengeluaran dengan kategori
+- **Profil Pengguna**: Kelola informasi dan preferensi akun
 
-A few resources to get you started if this is your first Flutter project:
+## Teknologi
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- Flutter & Dart
+- Provider untuk state management
+- FL Chart untuk visualisasi data
+- Firebase untuk autentikasi dan database
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Cara Memulai
+
+1. Pastikan Flutter SDK sudah terinstal di komputer Anda
+2. Clone repositori ini
+3. Jalankan `flutter pub get` untuk menginstal dependensi
+4. Jalankan `flutter run` untuk memulai aplikasi
+
+## Kontribusi
+
+Kontribusi dan saran sangat diterima. Silakan buat pull request atau buka issue untuk diskusi fitur baru.
+
+## Lisensi
+
+Aplikasi ini dilisensikan di bawah [MIT License](LICENSE).
