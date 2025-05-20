@@ -13,10 +13,42 @@ class HomeScreen extends StatefulWidget {
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+  
+  // Static method to navigate to a specific tab
+  static void navigateToTab(BuildContext context, int tabIndex) {
+    final homeState = context.findRootAncestorStateOfType<_HomeScreenState>();
+    if (homeState != null) {
+      homeState.setTab(tabIndex);
+    }
+  }
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  
+  // Public method to set tab
+  void setTab(int index) {
+    if (index != _currentIndex) {
+      setState(() {
+        // Restart animations when navigating to a tab
+        switch (index) {
+          case 0:
+            _dashboardTabKey.currentState?.resetAnimation();
+            break;
+          case 1:
+            _savingsPotTabKey.currentState?.resetAnimation();
+            break;
+          case 2:
+            _transactionsTabKey.currentState?.resetAnimation();
+            break;
+          case 3:
+            _profileTabKey.currentState?.resetAnimation();
+            break;
+        }
+        _currentIndex = index;
+      });
+    }
+  }
   
   // Reference to tab keys to call their methods
   final GlobalKey<SavingsPotTabState> _savingsPotTabKey = GlobalKey<SavingsPotTabState>();

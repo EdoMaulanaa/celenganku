@@ -11,6 +11,7 @@ import '../../utils/chart_utils.dart';
 import '../../models/savings_pot.dart';
 import '../../models/transaction.dart';
 import '../../models/transaction_category.dart';
+import 'home_screen.dart';
 
 class DashboardTab extends StatefulWidget {
   const DashboardTab({super.key});
@@ -587,11 +588,8 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
             // View all button
             TextButton(
               onPressed: () {
-                // Switch to Pots tab
-                final tabController = DefaultTabController.of(context);
-                if (tabController != null) {
-                  tabController.animateTo(1); // Navigate to Pots tab
-                }
+                // Navigate to Pots tab (index 1)
+                HomeScreen.navigateToTab(context, 1);
               },
               child: const Text('View All'),
             ),
