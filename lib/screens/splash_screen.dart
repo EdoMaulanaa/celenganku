@@ -20,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     );
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
@@ -42,8 +42,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Wait at least 2 seconds to show splash screen
-    await Future.delayed(const Duration(seconds: 2));
+    // Wait at least 3 seconds to show splash screen
+    await Future.delayed(const Duration(seconds: 3));
     
     if (!mounted) return;
     

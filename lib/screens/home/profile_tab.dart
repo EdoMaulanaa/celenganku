@@ -41,6 +41,34 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
     _animationController.forward();
   }
   
+  // Custom page route with animations
+  PageRouteBuilder<dynamic> _createAnimatedRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 400),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        // Combine slide and fade animations
+        var curve = Curves.easeOutQuint;
+        var curveTween = CurveTween(curve: curve);
+        
+        var fadeTween = Tween<double>(begin: 0.0, end: 1.0);
+        var fadeAnimation = animation.drive(fadeTween.chain(curveTween));
+        
+        var slideTween = Tween<Offset>(begin: const Offset(0.0, 0.25), end: Offset.zero);
+        var slideAnimation = animation.drive(slideTween.chain(curveTween));
+        
+        return SlideTransition(
+          position: slideAnimation,
+          child: FadeTransition(
+            opacity: fadeAnimation,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -52,105 +80,263 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
       ?? 'User';
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        elevation: 0,
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 20),
-            
-            // User avatar and info section with fade + slide animation
+            // Profile header with cover image and avatar
             _buildAnimatedSection(
               index: 0,
-              child: Column(
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
                 children: [
-                  // User avatar
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                    backgroundImage: authProvider.profile?.avatarUrl != null
-                      ? NetworkImage(authProvider.profile!.avatarUrl!)
-                      : null,
-                    child: authProvider.profile?.avatarUrl == null
-                      ? Icon(
-                          Icons.person,
-                          size: 50,
-                          color: Theme.of(context).colorScheme.primary,
-                        )
-                      : null,
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // User name
-                  Text(
-                    username,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                  // Cover image
+                  Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 60.0, left: 20.0),
+                      child: Text(
+                        'Profile',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                   
-                  // User email
-                  Text(
-                    authProvider.user?.email ?? 'No email',
-                    style: TextStyle(
-                      color: Theme.of(context).textTheme.bodySmall?.color,
+                  // Avatar and user info card
+                  Positioned(
+                    bottom: -75,
+                    left: 16,
+                    right: 16,
+                    child: Material(
+                      borderRadius: BorderRadius.circular(20),
+                      elevation: 4,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          children: [
+                            // User avatar 
+                            CircleAvatar(
+                              radius: 45,
+                              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                              backgroundImage: authProvider.profile?.avatarUrl != null
+                                ? NetworkImage(authProvider.profile!.avatarUrl!)
+                                : null,
+                              child: authProvider.profile?.avatarUrl == null
+                                ? Icon(
+                                    Icons.person,
+                                    size: 45,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  )
+                                : null,
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // User name with verified badge
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  username,
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.verified,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 4),
+                            
+                            // User email
+                            Text(
+                              authProvider.user?.email ?? 'No email',
+                              style: TextStyle(
+                                color: Theme.of(context).textTheme.bodySmall?.color,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
             
-            const SizedBox(height: 32),
+            // Spacing to account for the overlapping user card
+            const SizedBox(height: 95),
             
-            // Profile options card with animation
+            // Account settings section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Account Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            
+            // Account settings card with animation
             _buildAnimatedSection(
               index: 1,
-              child: Card(
-                margin: EdgeInsets.zero,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
-                    // Edit profile option
-                    ListTile(
-                      leading: const Icon(Icons.person_outline),
-                      title: const Text('Edit Profile'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const EditProfileScreen(),
+                    // Edit profile option - tambahkan sebagai opsi menu tambahan
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          print("Edit profile menu item tapped");
+                          Navigator.of(context).push(
+                            _createAnimatedRoute(const EditProfileScreen())
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.person_outline_rounded,
+                                color: Colors.green,
+                              ),
+                            ),
+                            title: const Text(
+                              'Edit Profile',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                     
-                    const Divider(height: 1),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Colors.grey.withOpacity(0.2),
+                    ),
                     
                     // Change password option
-                    ListTile(
-                      leading: const Icon(Icons.lock_outline),
-                      title: const Text('Change Password'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ChangePasswordScreen(),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            _createAnimatedRoute(const ChangePasswordScreen())
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: ListTile(
+                            leading: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.lock_outline_rounded,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            title: const Text(
+                              'Change Password',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            trailing: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                     
-                    const Divider(height: 1),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Colors.grey.withOpacity(0.2),
+                    ),
                     
                     // Theme toggle option
                     SwitchListTile(
-                      secondary: const Icon(Icons.dark_mode_outlined),
-                      title: const Text('Dark Mode'),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          themeProvider.isDarkMode
+                              ? Icons.dark_mode_rounded
+                              : Icons.light_mode_rounded,
+                          color: Colors.purple,
+                        ),
+                      ),
+                      title: const Text(
+                        'Dark Mode',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
                       value: themeProvider.isDarkMode,
                       onChanged: (_) {
                         themeProvider.toggleTheme();
@@ -163,30 +349,94 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
             
             const SizedBox(height: 24),
             
+            // App info section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Information',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            
             // App info card with animation
             _buildAnimatedSection(
               index: 2,
-              child: Card(
-                margin: EdgeInsets.zero,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
                     // About option
                     ListTile(
-                      leading: const Icon(Icons.info_outline),
-                      title: const Text('About'),
-                      trailing: const Icon(Icons.chevron_right),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.info_outline_rounded,
+                          color: Colors.teal,
+                        ),
+                      ),
+                      title: const Text(
+                        'About',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       onTap: () {
                         // Show about dialog
                       },
                     ),
                     
-                    const Divider(height: 1),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: Colors.grey.withOpacity(0.2),
+                    ),
                     
                     // Help option
                     ListTile(
-                      leading: const Icon(Icons.help_outline),
-                      title: const Text('Help & Support'),
-                      trailing: const Icon(Icons.chevron_right),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.help_outline_rounded,
+                          color: Colors.amber,
+                        ),
+                      ),
+                      title: const Text(
+                        'Help & Support',
+                        style: TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      trailing: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       onTap: () {
                         // Navigate to help screen
                       },
@@ -201,44 +451,55 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
             // Sign out button with animation
             _buildAnimatedSection(
               index: 3,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  // Show confirmation dialog
-                  final result = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Sign Out'),
-                      content: const Text('Are you sure you want to sign out?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Sign Out'),
-                        ),
-                      ],
-                    ),
-                  );
-                  
-                  if (result == true) {
-                    // Sign out
-                    final signedOut = await authProvider.signOut();
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    // Show confirmation dialog
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Sign Out'),
+                        content: const Text('Are you sure you want to sign out?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Sign Out'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                     
-                    if (signedOut && context.mounted) {
-                      // Navigate to login screen
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
+                    if (result == true) {
+                      // Sign out
+                      final signedOut = await authProvider.signOut();
+                      
+                      if (signedOut && context.mounted) {
+                        // Navigate to login screen
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        );
+                      }
                     }
-                  }
-                },
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign Out'),
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.red,
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Sign Out'),
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -248,14 +509,18 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
             // App version with animation
             _buildAnimatedSection(
               index: 4,
-              child: Text(
-                'Version 1.0.0',
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodySmall?.color,
-                  fontSize: 12,
+              child: Center(
+                child: Text(
+                  'Version 1.0.0',
+                  style: TextStyle(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ),
+            
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -266,7 +531,7 @@ class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMi
   Widget _buildAnimatedSection({required int index, required Widget child}) {
     // Create staggered animation for each section
     final slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -0.3),
+      begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/transaction.dart';
 import '../models/transaction_category.dart';
@@ -29,6 +30,9 @@ class TransactionProvider extends ChangeNotifier {
   List<Transaction> _transactions = [];
   List<Transaction> get transactions => _transactions;
   
+  // Stream subscription
+  StreamSubscription<List<Transaction>>? _transactionSubscription;
+  
   // Filtered transactions for current pot
   List<Transaction> get currentPotTransactions {
     if (_currentPotId == null) return [];
@@ -45,6 +49,18 @@ class TransactionProvider extends ChangeNotifier {
     Future.microtask(() => loadTransactions());
   }
   
+  @override
+  void dispose() {
+    _cancelSubscription();
+    super.dispose();
+  }
+  
+  // Cancel existing subscription
+  void _cancelSubscription() {
+    _transactionSubscription?.cancel();
+    _transactionSubscription = null;
+  }
+  
   // Get category for a transaction
   TransactionCategory? getCategoryForTransaction(Transaction transaction) {
     if (transaction.categoryId != null) {
@@ -55,9 +71,15 @@ class TransactionProvider extends ChangeNotifier {
   
   // Set current pot ID
   void setCurrentPotId(String? potId, {bool notify = true}) {
-    _currentPotId = potId;
-    if (notify) {
-      notifyListeners();
+    if (_currentPotId != potId) {
+      _currentPotId = potId;
+      
+      // Reload transactions with new potId filter
+      loadTransactions();
+      
+      if (notify) {
+        notifyListeners();
+      }
     }
   }
   
@@ -69,21 +91,27 @@ class TransactionProvider extends ChangeNotifier {
       _status = TransactionStatus.loading;
       notifyListeners();
       
-      // Reload data based on current context
-      if (_currentPotId != null) {
-        print('Loading transactions for pot: $_currentPotId');
-        final result = await _supabaseService.getTransactionsForPot(_currentPotId!);
-        _transactions = result;
-      } else {
-        print('Loading all transactions');
-        final result = await _supabaseService.getAllTransactions();
-        _transactions = result;
-      }
+      // Cancel any existing subscription
+      _cancelSubscription();
       
-      print('Loaded ${_transactions.length} transactions');
+      // Create a new subscription based on current context
+      _transactionSubscription = _supabaseService
+          .streamTransactions(potId: _currentPotId)
+          .listen(
+            (updatedTransactions) {
+              _transactions = updatedTransactions;
+              _status = TransactionStatus.loaded;
+              notifyListeners();
+              print('Transactions updated: ${_transactions.length}');
+            },
+            onError: (error) {
+              print('Error in transaction stream: $error');
+              _status = TransactionStatus.error;
+              _errorMessage = 'Error streaming transactions: $error';
+              notifyListeners();
+            },
+          );
       
-      _status = TransactionStatus.loaded;
-      notifyListeners();
     } catch (e) {
       print('Error loading transactions: $e');
       _status = TransactionStatus.error;
@@ -164,12 +192,9 @@ class TransactionProvider extends ChangeNotifier {
         createdAt: now,
       );
       
-      // Save to database
+      // Save to database - the UI will update automatically via the stream
       try {
-        final savedTransaction = await _supabaseService.createTransaction(newTransaction);
-        
-        // Add to local list
-        _transactions.add(savedTransaction);
+        await _supabaseService.createTransaction(newTransaction);
         
         // Refresh savings pots to see updated balance
         await _savingsProvider.loadSavingsPots();

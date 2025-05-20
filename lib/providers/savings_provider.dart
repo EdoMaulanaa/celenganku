@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/savings_pot.dart';
 import '../services/supabase_service.dart';
@@ -20,6 +21,9 @@ class SavingsProvider extends ChangeNotifier {
   List<SavingsPot> _savingsPots = [];
   List<SavingsPot> get savingsPots => _savingsPots;
   
+  // Stream subscription
+  StreamSubscription<List<SavingsPot>>? _savingsPotSubscription;
+  
   // Total balance across all savings pots
   double get totalBalance => _savingsPots.fold(
     0, (sum, pot) => sum + pot.currentBalance
@@ -35,6 +39,18 @@ class SavingsProvider extends ChangeNotifier {
     Future.microtask(() => loadSavingsPots());
   }
   
+  @override
+  void dispose() {
+    _cancelSubscription();
+    super.dispose();
+  }
+  
+  // Cancel existing subscription
+  void _cancelSubscription() {
+    _savingsPotSubscription?.cancel();
+    _savingsPotSubscription = null;
+  }
+  
   // Load all savings pots for current user
   Future<void> loadSavingsPots() async {
     if (!_supabaseService.isAuthenticated) return;
@@ -43,10 +59,26 @@ class SavingsProvider extends ChangeNotifier {
       _status = SavingsStatus.loading;
       notifyListeners();
       
-      _savingsPots = await _supabaseService.getSavingsPots();
+      // Cancel any existing subscription
+      _cancelSubscription();
       
-      _status = SavingsStatus.loaded;
-      notifyListeners();
+      // Create a new subscription
+      _savingsPotSubscription = _supabaseService
+          .streamSavingsPots()
+          .listen(
+            (updatedPots) {
+              _savingsPots = updatedPots;
+              _status = SavingsStatus.loaded;
+              notifyListeners();
+              print('Savings pots updated: ${_savingsPots.length}');
+            },
+            onError: (error) {
+              print('Error in savings pot stream: $error');
+              _status = SavingsStatus.error;
+              _errorMessage = 'Error streaming savings pots: $error';
+              notifyListeners();
+            },
+          );
     } catch (e) {
       _status = SavingsStatus.error;
       _errorMessage = 'Failed to load savings pots: ${e.toString()}';

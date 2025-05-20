@@ -55,6 +55,39 @@ class SupabaseService {
     );
   }
 
+  // REALTIME SUBSCRIPTION METHODS
+  
+  // Subscribe to transactions table changes and return a StreamSubscription
+  Stream<List<Transaction>> streamTransactions({String? potId}) {
+    if (potId != null) {
+      // Stream transactions for a specific pot
+      return client
+          .from('transactions')
+          .stream(primaryKey: ['id'])
+          .eq('savings_pot_id', potId)
+          .order('date', ascending: false)
+          .map((data) => data.map((item) => Transaction.fromJson(item)).toList());
+    } else {
+      // Stream all transactions for the current user
+      return client
+          .from('transactions')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', currentUser!.id)
+          .order('date', ascending: false)
+          .map((data) => data.map((item) => Transaction.fromJson(item)).toList());
+    }
+  }
+  
+  // Stream savings pots changes
+  Stream<List<SavingsPot>> streamSavingsPots() {
+    return client
+        .from('savings_pots')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', currentUser!.id)
+        .order('created_at')
+        .map((data) => data.map((item) => SavingsPot.fromJson(item)).toList());
+  }
+
   // AUTHENTICATION METHODS
   
   // Sign up with email and password

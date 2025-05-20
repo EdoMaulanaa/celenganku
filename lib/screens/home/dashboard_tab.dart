@@ -42,81 +42,105 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
   @override
   void initState() {
     super.initState();
+    
+    // Animation controller
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
     
-    // Create staggered animations for each card
+    // Create animations for each card
+    _setupAnimations();
+    
+    // Start animation
+    _animationController.forward();
+    
+    // Set up change listeners
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupProviderListeners();
+    });
+  }
+  
+  void _setupProviderListeners() {
+    // Listen for transaction changes
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+    transactionProvider.addListener(_onDataChanged);
+    
+    // Listen for savings pot changes
+    final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+    savingsProvider.addListener(_onDataChanged);
+    
+    // Listen for category changes
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    categoryProvider.addListener(_onDataChanged);
+  }
+  
+  void _onDataChanged() {
+    // This will be called when any of the providers notify their listeners
+    // We don't need to setState here since the Consumers in the build method will handle the UI updates
+    print('Dashboard data changed, charts will update');
+  }
+
+  void _setupAnimations() {
+    // Create slide animations for each card with different delays
     _slideAnimations = List.generate(
       _cardKeys.length,
       (index) => Tween<Offset>(
-        begin: const Offset(0, -0.3),
+        begin: const Offset(1.0, 0.0),
         end: Offset.zero,
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Interval(
-            index * 0.1, // Staggered start times
-            0.7 + (index * 0.05), // Overlap end times slightly
-            curve: Curves.easeOutCubic,
-          ),
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(
+          index * 0.1, // Start time (staggered)
+          index * 0.1 + 0.5, // End time
+          curve: Curves.easeOutCubic,
         ),
-      ),
+      )),
     );
     
+    // Create fade animations for each card
     _fadeAnimations = List.generate(
       _cardKeys.length,
       (index) => Tween<double>(
-        begin: 0,
-        end: 1,
-      ).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Interval(
-            index * 0.1,
-            0.7 + (index * 0.05),
-            curve: Curves.easeOut,
-          ),
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(
+          index * 0.1, // Start time (staggered)
+          index * 0.1 + 0.5, // End time
+          curve: Curves.easeOut,
         ),
-      ),
+      )),
     );
-    
-    // Refresh data when screen is loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<SavingsProvider>(context, listen: false).loadSavingsPots();
-      Provider.of<TransactionProvider>(context, listen: false).loadTransactions();
-      Provider.of<CategoryProvider>(context, listen: false).loadCategories();
-      _animationController.forward();
-    });
   }
-
+  
   @override
   void dispose() {
     _animationController.dispose();
+    
+    // Remove listeners
+    Provider.of<TransactionProvider>(context, listen: false)
+        .removeListener(_onDataChanged);
+    Provider.of<SavingsProvider>(context, listen: false)
+        .removeListener(_onDataChanged);
+    Provider.of<CategoryProvider>(context, listen: false)
+        .removeListener(_onDataChanged);
+    
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final savingsProvider = Provider.of<SavingsProvider>(context);
-    final transactionProvider = Provider.of<TransactionProvider>(context);
-    final categoryProvider = Provider.of<CategoryProvider>(context);
+    // Get media query data for responsive layout and safe areas
+    final mediaQuery = MediaQuery.of(context);
+    // Calculate additional padding to avoid camera notch
+    final topPadding = mediaQuery.padding.top > 0 ? mediaQuery.padding.top + 25.0 : 50.0;
     
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        elevation: 0,
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await savingsProvider.loadSavingsPots();
-          await transactionProvider.loadTransactions();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+    return Consumer4<AuthProvider, TransactionProvider, SavingsProvider, CategoryProvider>(
+      builder: (context, authProvider, transactionProvider, savingsProvider, categoryProvider, _) {
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(16, topPadding, 16, 16), // Dynamic padding based on device
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -144,8 +168,8 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
               _buildRecentPotsSection(savingsProvider),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
   
@@ -339,7 +363,7 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
                         barGroups: ChartUtils.generateMonthlySavingsBarChart(
-                            transactions: transactionProvider.transactions,
+                          transactions: transactionProvider.transactions,
                           numberOfMonths: 6,
                         ),
                         titlesData: FlTitlesData(
@@ -347,23 +371,15 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
+                                // Get month names for the last 6 months
                                 final now = DateTime.now();
-                                final month = now.month - (5 - value.toInt());
+                                final month = now.month - value.toInt();
                                 final adjustedMonth = month <= 0 ? month + 12 : month;
-                                
-                                // Get month name abbreviation
-                                final monthName = DateFormat('MMM').format(
-                                  DateTime(2022, adjustedMonth, 1),
-                                );
-                                
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    monthName,
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
+                                return Text(
+                                  DateFormat('MMM').format(DateTime(now.year, adjustedMonth)),
+                                  style: const TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 10,
                                   ),
                                 );
                               },
@@ -383,6 +399,8 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                         gridData: const FlGridData(show: false),
                         borderData: FlBorderData(show: false),
                       ),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut,
                     ),
             ),
           ],
@@ -441,14 +459,16 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                   : PieChart(
                       PieChartData(
                         sections: ChartUtils.generateCategoryPieCharts(
-                            transactions: transactionProvider.transactions,
-                            categories: categoryProvider.allCategories,
+                          transactions: transactionProvider.transactions,
+                          categories: categoryProvider.allCategories,
                           type: TransactionType.expense,
                           radius: 100,
                         ),
                         sectionsSpace: 2,
                         centerSpaceRadius: 40,
                       ),
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut,
                     ),
             ),
             const SizedBox(height: 16),
