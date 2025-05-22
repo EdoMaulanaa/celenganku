@@ -13,7 +13,7 @@ class ProfileTab extends StatefulWidget {
   State<ProfileTab> createState() => ProfileTabState();
 }
 
-class ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateMixin {
+class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
   late AnimationController _animationController;
   final List<GlobalKey> _sectionKeys = List.generate(5, (_) => GlobalKey());
 

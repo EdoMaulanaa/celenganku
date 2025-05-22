@@ -26,6 +26,10 @@ class TransactionProvider extends ChangeNotifier {
   String? _currentPotId;
   String? get currentPotId => _currentPotId;
   
+  // Flag to toggle between grouping expenses by category or savings pot
+  bool _groupExpensesBySavingsPot = true;
+  bool get groupExpensesBySavingsPot => _groupExpensesBySavingsPot;
+  
   // List of transactions
   List<Transaction> _transactions = [];
   List<Transaction> get transactions => _transactions;
@@ -53,6 +57,14 @@ class TransactionProvider extends ChangeNotifier {
   void dispose() {
     _cancelSubscription();
     super.dispose();
+  }
+  
+  // Set grouping method for expense breakdown
+  void setGroupExpensesBySavingsPot(bool value) {
+    if (_groupExpensesBySavingsPot != value) {
+      _groupExpensesBySavingsPot = value;
+      notifyListeners();
+    }
   }
   
   // Cancel existing subscription
@@ -96,13 +108,13 @@ class TransactionProvider extends ChangeNotifier {
       
       // Create a new subscription based on current context
       _transactionSubscription = _supabaseService
-          .streamTransactions(potId: _currentPotId)
+          .streamTransactions(potId: _currentPotId) // When null, it will stream ALL user transactions
           .listen(
             (updatedTransactions) {
               _transactions = updatedTransactions;
               _status = TransactionStatus.loaded;
               notifyListeners();
-              print('Transactions updated: ${_transactions.length}');
+              print('Transactions updated: ${_transactions.length} transactions loaded.');
             },
             onError: (error) {
               print('Error in transaction stream: $error');
@@ -313,8 +325,13 @@ class TransactionProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Refresh data
+  // Manual refresh function to reload transactions
   Future<void> refresh() async {
+    // Ensure we're loading ALL transactions
+    if (_currentPotId != null) {
+      _currentPotId = null;
+    }
+    
     await loadTransactions();
   }
 } 

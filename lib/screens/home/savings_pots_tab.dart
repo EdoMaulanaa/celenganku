@@ -14,12 +14,17 @@ class SavingsPotTab extends StatefulWidget {
   State<SavingsPotTab> createState() => SavingsPotTabState();
 }
 
-class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderStateMixin {
+class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMixin {
   bool _isLoading = false;
   late AnimationController _animationController;
   final TextEditingController _searchController = TextEditingController();
   bool _showSearchField = false;
   final FocusNode _searchFocusNode = FocusNode();
+  
+  // Animation controller for search field
+  late AnimationController _searchAnimationController;
+  late Animation<double> _searchWidthAnimation;
+  late Animation<double> _searchOpacityAnimation;
   
   @override
   void initState() {
@@ -28,6 +33,29 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+    
+    // Initialize search animation controller
+    _searchAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
+    // Create animations for search field
+    _searchWidthAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _searchAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+    
+    _searchOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _searchAnimationController,
+      curve: Curves.easeOut,
+    ));
     
     // Using Future.microtask to ensure this doesn't run during build phase
     Future.microtask(() {
@@ -42,6 +70,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
   @override
   void dispose() {
     _animationController.dispose();
+    _searchAnimationController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -85,6 +114,16 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
   void resetAnimation() {
     _animationController.reset();
     _animationController.forward();
+    
+    // Reset search field if it was showing
+    if (_showSearchField) {
+      setState(() {
+        _showSearchField = false;
+      });
+      _searchAnimationController.value = 0.0; // Reset to beginning without animation
+      _searchController.clear();
+      Provider.of<SavingsProvider>(context, listen: false).clearSearch();
+    }
   }
   
   Future<void> _loadSavingsPots() async {
@@ -110,38 +149,80 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: _showSearchField
-            ? TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Search pots...',
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
-                ),
-                style: const TextStyle(fontSize: 16),
-              )
-            : const Text('Savings Pots'),
+        title: AnimatedBuilder(
+          animation: _searchAnimationController,
+          builder: (context, child) {
+            return _showSearchField
+                ? Opacity(
+                    opacity: _searchOpacityAnimation.value,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * _searchWidthAnimation.value,
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        autofocus: true,
+                        decoration: InputDecoration(
+                          hintText: 'Search pots...',
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? AnimatedOpacity(
+                                  opacity: 1.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      Provider.of<SavingsProvider>(context, listen: false).clearSearch();
+                                    },
+                                  ),
+                                )
+                              : null,
+                        ),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  )
+                : Opacity(
+                    opacity: 1 - _searchOpacityAnimation.value,
+                    child: const Text('Savings Pots'),
+                  );
+          },
+        ),
         elevation: 0,
         actions: [
           // Search button
           IconButton(
-            icon: Icon(_showSearchField ? Icons.close : Icons.search),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: Icon(
+                _showSearchField ? Icons.close : Icons.search,
+                key: ValueKey<bool>(_showSearchField),
+              ),
+            ),
             onPressed: () {
-              setState(() {
-                _showSearchField = !_showSearchField;
-                if (_showSearchField) {
-                  // Focus the search field after showing it
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    _searchFocusNode.requestFocus();
-                  });
-                } else {
-                  _searchController.clear();
-                  Provider.of<SavingsProvider>(context, listen: false)
-                      .clearSearch();
-                }
-              });
+              if (_showSearchField) {
+                // Hide search field
+                setState(() {
+                  _showSearchField = false;
+                });
+                _searchAnimationController.reverse();
+                _searchController.clear();
+                Provider.of<SavingsProvider>(context, listen: false).clearSearch();
+              } else {
+                // Show search field
+                setState(() {
+                  _showSearchField = true;
+                });
+                _searchAnimationController.forward();
+                // Focus the search field after showing it
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  _searchFocusNode.requestFocus();
+                });
+              }
             },
           ),
           // Refresh button
@@ -199,49 +280,54 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         final pot = pots[index];
-        
-        // Create staggered animation for each item
-        final animation = Tween<Offset>(
-          begin: const Offset(0, -0.3),
-          end: Offset.zero,
-        ).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Interval(
-              index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9, // First 15 items staggered, rest together
-              index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
-              curve: Curves.easeOutCubic,
+        return _buildSavingsPotItem(pot, index, currencyFormat);
+      },
+    );
+  }
+  
+  Widget _buildSavingsPotItem(SavingsPot pot, int index, NumberFormat currencyFormat) {
+    // Create staggered animation for each item with unique keys
+    final animation = Tween<Offset>(
+      begin: const Offset(0, -0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(
+          index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9, // First 15 items staggered, rest together
+          index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+          curve: Curves.easeOutCubic,
+        ),
+      ),
+    );
+    
+    final fadeAnim = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Interval(
+          index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9,
+          index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
+          curve: Curves.easeOut,
+        ),
+      ),
+    );
+    
+    return SlideTransition(
+      position: animation,
+      child: FadeTransition(
+        opacity: fadeAnim,
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => PotDetailsScreen(potId: pot.id),
               ),
             ),
-        );
-        
-        final fadeAnim = Tween<double>(
-          begin: 0.0,
-          end: 1.0,
-        ).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Interval(
-              index < 15 ? (index * 0.05).clamp(0.0, 0.9) : 0.9,
-              index < 15 ? (index * 0.05 + 0.5).clamp(0.0, 1.0) : 1.0,
-              curve: Curves.easeOut,
-            ),
-        ),
-      );
-        
-        return SlideTransition(
-          position: animation,
-          child: FadeTransition(
-            opacity: fadeAnim,
-            child: Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: InkWell(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => PotDetailsScreen(potId: pot.id),
-                  ),
-                ),
-                borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -320,13 +406,11 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
                     ),
                   ],
                 ],
-                  ),
-                ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
   
@@ -373,10 +457,11 @@ class SavingsPotTabState extends State<SavingsPotTab> with SingleTickerProviderS
               onPressed: () {
                 setState(() {
                   _showSearchField = true;
-                  // Focus the search field after showing it
-                  Future.delayed(const Duration(milliseconds: 100), () {
-                    _searchFocusNode.requestFocus();
-                  });
+                });
+                _searchAnimationController.forward();
+                // Focus the search field after showing it
+                Future.delayed(const Duration(milliseconds: 100), () {
+                  _searchFocusNode.requestFocus();
                 });
               },
               icon: const Icon(Icons.search),

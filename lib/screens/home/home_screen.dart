@@ -51,24 +51,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   // Reference to tab keys to call their methods
-  final GlobalKey<SavingsPotTabState> _savingsPotTabKey = GlobalKey<SavingsPotTabState>();
-  final GlobalKey<DashboardTabState> _dashboardTabKey = GlobalKey<DashboardTabState>();
-  final GlobalKey<TransactionsTabState> _transactionsTabKey = GlobalKey<TransactionsTabState>();
-  final GlobalKey<ProfileTabState> _profileTabKey = GlobalKey<ProfileTabState>();
+  final GlobalKey<SavingsPotTabState> _savingsPotTabKey = GlobalKey<SavingsPotTabState>(debugLabel: 'savingsPotTabKey');
+  final GlobalKey<DashboardTabState> _dashboardTabKey = GlobalKey<DashboardTabState>(debugLabel: 'dashboardTabKey');
+  final GlobalKey<TransactionsTabState> _transactionsTabKey = GlobalKey<TransactionsTabState>(debugLabel: 'transactionsTabKey');
+  final GlobalKey<ProfileTabState> _profileTabKey = GlobalKey<ProfileTabState>(debugLabel: 'profileTabKey');
   
-  // List of tab screens
-  late final List<Widget> _tabs;
+  // Create tab widgets directly as fields
+  Widget? _dashboardTab;
+  Widget? _savingsPotTab;
+  Widget? _transactionsTab;
+  Widget? _profileTab;
+  
+  // Ensure each tab is created only once
+  Widget _getDashboardTab() {
+    _dashboardTab ??= DashboardTab(key: _dashboardTabKey);
+    return _dashboardTab!;
+  }
+  
+  Widget _getSavingsPotTab() {
+    _savingsPotTab ??= SavingsPotTab(key: _savingsPotTabKey);
+    return _savingsPotTab!;
+  }
+  
+  Widget _getTransactionsTab() {
+    _transactionsTab ??= TransactionsTab(key: _transactionsTabKey);
+    return _transactionsTab!;
+  }
+  
+  Widget _getProfileTab() {
+    _profileTab ??= ProfileTab(key: _profileTabKey);
+    return _profileTab!;
+  }
   
   @override
   void initState() {
     super.initState();
-    // Initialize tabs with the keys
-    _tabs = [
-      DashboardTab(key: _dashboardTabKey),
-      SavingsPotTab(key: _savingsPotTabKey),
-      TransactionsTab(key: _transactionsTabKey),
-      ProfileTab(key: _profileTabKey),
-    ];
   }
   
   // Handle sign out
@@ -101,14 +118,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the current tab based on index
+    Widget currentTab;
+    switch (_currentIndex) {
+      case 0:
+        currentTab = _getDashboardTab();
+        break;
+      case 1:
+        currentTab = _getSavingsPotTab();
+        break;
+      case 2:
+        currentTab = _getTransactionsTab();
+        break;
+      case 3:
+        currentTab = _getProfileTab();
+        break;
+      default:
+        currentTab = _getDashboardTab();
+    }
+    
     return Scaffold(
-      body: _tabs[_currentIndex],
+      body: currentTab,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
           // Only process if we're actually changing tabs
           if (index != _currentIndex) {
-          setState(() {
+            setState(() {
               // Restart animations when navigating to a tab
               switch (index) {
                 case 0:
@@ -124,8 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   _profileTabKey.currentState?.resetAnimation();
                   break;
               }
-            _currentIndex = index;
-          });
+              _currentIndex = index;
+            });
           }
         },
         type: BottomNavigationBarType.fixed,
@@ -151,8 +187,11 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: _currentIndex == 1 
           ? FloatingActionButton(
               onPressed: () {
-                // Directly show the create pot dialog using the public method
-                _savingsPotTabKey.currentState?.showCreatePotDialog();
+                // Safely access the SavingsPotTabState
+                final state = _savingsPotTabKey.currentState;
+                if (state != null && state.mounted) {
+                  state.showCreatePotDialog();
+                }
               },
               heroTag: 'createPotFAB',
               child: const Icon(Icons.add),

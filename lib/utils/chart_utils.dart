@@ -11,6 +11,8 @@ class ChartUtils {
     required List<TransactionCategory> categories,
     required TransactionType type,
     double radius = 100,
+    List<SavingsPot>? savingsPots,
+    bool groupBySavingsPot = true,
   }) {
     // Filter transactions by type
     final filteredTransactions = transactions
@@ -33,7 +35,119 @@ class ChartUtils {
       ];
     }
     
-    // Group transactions by category ID
+    if (groupBySavingsPot && savingsPots != null) {
+      // Group transactions by savings pot ID
+      final potAmounts = <String, double>{};
+      final potNames = <String, String>{};
+      
+      for (final txn in filteredTransactions) {
+        final potId = txn.savingsPotId;
+        potAmounts[potId] = (potAmounts[potId] ?? 0) + txn.amount;
+        
+        // Find the pot name
+        try {
+          final pot = savingsPots.firstWhere(
+            (pot) => pot.id == potId,
+            orElse: () => SavingsPot(
+              id: potId,
+              userId: '',
+              name: 'Unknown',
+              description: '',
+              currentBalance: 0,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+          potNames[potId] = pot.name;
+        } catch (_) {
+          potNames[potId] = 'Unknown';
+        }
+      }
+      
+      // Filter out pots with no progress (amount = 0)
+      potAmounts.removeWhere((key, value) => value <= 0);
+      
+      if (potAmounts.isEmpty) {
+        return [
+          PieChartSectionData(
+            color: Colors.grey.shade300,
+            value: 100,
+            title: 'No data',
+            titleStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+            radius: radius,
+          ),
+        ];
+      }
+      
+      // Sort by amount (descending) to ensure consistent color assignment
+      final sortedEntries = potAmounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      
+      // Calculate total amount
+      final totalAmount = potAmounts.values.fold<double>(0, (sum, amount) => sum + amount);
+      
+      // Generate pie chart sections for savings pots
+      final sections = <PieChartSectionData>[];
+      
+      // Define a list of distinct colors for different pots
+      final potColors = [
+        Colors.purple,
+        Colors.blue,
+        Colors.green,
+        Colors.amber,
+        Colors.orange,
+        Colors.red,
+        Colors.teal,
+        Colors.indigo,
+        Colors.pink,
+        Colors.brown,
+        Colors.cyan,
+        Colors.deepOrange,
+        Colors.lime,
+        Colors.deepPurple,
+        Colors.lightBlue,
+      ];
+      
+      // Use sorted entries to ensure consistent color assignment with legend
+      for (int i = 0; i < sortedEntries.length; i++) {
+        final entry = sortedEntries[i];
+        final potId = entry.key;
+        final amount = entry.value;
+        final percentage = (amount / totalAmount) * 100;
+        final potName = potNames[potId] ?? 'Unknown';
+        final color = potColors[i % potColors.length];
+        
+        sections.add(
+          PieChartSectionData(
+            color: color,
+            value: amount,
+            title: percentage >= 5 ? '${percentage.toStringAsFixed(1)}%' : '',
+            titleStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+            radius: radius,
+            badgeWidget: percentage >= 5 
+                ? Icon(
+                    Icons.savings,
+                    color: Colors.white,
+                    size: 16,
+                  )
+                : null,
+            badgePositionPercentageOffset: 0.9,
+          ),
+        );
+      }
+      
+      return sections;
+    }
+    
+    // Original behavior - group by category
     final categoryAmounts = <String, double>{};
     for (final txn in filteredTransactions) {
       if (txn.categoryId != null) {

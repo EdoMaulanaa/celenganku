@@ -5,8 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/savings_provider.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/category_provider.dart';
 import '../models/savings_pot.dart';
 import '../models/transaction.dart';
+import '../models/transaction_category.dart';
 import '../utils/formatter.dart';
 import '../utils/chart_utils.dart';
 
@@ -120,9 +122,26 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                     ),
                   ),
                 ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _showAddTransactionDialog(context, pot),
-            child: const Icon(Icons.add),
+          floatingActionButton: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Deposit button (Add money)
+              FloatingActionButton(
+                onPressed: () => _showAddTransactionDialog(context, pot, TransactionType.income),
+                heroTag: 'deposit',
+                backgroundColor: Colors.green,
+                child: const Icon(Icons.arrow_downward),
+              ),
+              const SizedBox(height: 16),
+              // Withdraw button (Take money)
+              FloatingActionButton(
+                onPressed: () => _showAddTransactionDialog(context, pot, TransactionType.expense),
+                heroTag: 'withdraw',
+                backgroundColor: Colors.red,
+                child: const Icon(Icons.arrow_upward),
+              ),
+            ],
           ),
         );
       },
@@ -638,24 +657,37 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
   }
   
   // Add transaction dialog
-  void _showAddTransactionDialog(BuildContext context, SavingsPot pot) {
+  void _showAddTransactionDialog(BuildContext context, SavingsPot pot, TransactionType transactionType) {
     final TextEditingController amountController = TextEditingController();
     final TextEditingController notesController = TextEditingController();
     
     bool isSubmitting = false;
     String? errorMessage;
+    String? selectedCategoryId;
     
     // Get current date as default
     DateTime transactionDate = DateTime.now();
     
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
+
+    // Get the transaction provider
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+    // Get the category provider for expense categories
+    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+
+    // Filter categories to only show expense categories if this is a withdrawal
+    final categories = transactionType == TransactionType.expense
+        ? categoryProvider.allCategories.where((cat) => cat.type == TransactionType.expense).toList()
+        : [];
     
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text(
-            'Add Transaction to ${pot.name}',
+            transactionType == TransactionType.income
+                ? 'Deposit to ${pot.name}'
+                : 'Withdraw from ${pot.name}',
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -722,6 +754,56 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   ),
                   maxLength: 100,
                 ),
+                
+                // Category dropdown (only for withdrawals)
+                if (transactionType == TransactionType.expense) ...[
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Category',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedCategoryId,
+                    decoration: const InputDecoration(
+                      labelText: 'Select a category',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('No category'),
+                      ),
+                      ...categories.map((category) {
+                        return DropdownMenuItem<String>(
+                          value: category.id,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: category.color,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(category.name),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        selectedCategoryId = value;
+                      });
+                    },
+                  ),
+                ],
                 
                 const SizedBox(height: 16),
                 
@@ -797,7 +879,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       }
                       
                       // For withdrawals, check if there's enough balance
-                      if (amount > pot.currentBalance) {
+                      if (transactionType == TransactionType.expense && amount > pot.currentBalance) {
                         setState(() {
                           errorMessage = 'Insufficient balance for withdrawal';
                         });
@@ -811,22 +893,31 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       });
                       
                       try {
-                        print('Attempting to create transaction: Amount=$amount, PotID=${pot.id}');
+                        print('Attempting to create transaction: Amount=$amount, Type=${transactionType.toString()}, PotID=${pot.id}');
                         
-                        // Using Provider.of with listen: false for callbacks
-                        final transactionProvider = Provider.of<TransactionProvider>(
-                          context, 
-                          listen: false
-                        );
+                        // Get category name if selected
+                        String? categoryName;
+                        if (selectedCategoryId != null) {
+                          try {
+                            final category = categoryProvider.getCategoryById(selectedCategoryId);
+                            if (category != null) {
+                              categoryName = category.name;
+                            }
+                          } catch (e) {
+                            // Ignore error if category not found
+                          }
+                        }
                         
                         final success = await transactionProvider.createTransaction(
                           savingsPotId: pot.id,
                           amount: amount,
-                          type: TransactionType.expense,
+                          type: transactionType,
                           date: transactionDate,
                           notes: notesController.text.isNotEmpty 
                               ? notesController.text.trim() 
                               : null,
+                          categoryId: selectedCategoryId,
+                          category: categoryName,
                         );
                         
                         if (success) {
@@ -838,12 +929,18 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                           
                           print('Transaction created successfully');
                           
+                          final actionText = transactionType == TransactionType.income
+                              ? 'deposited to'
+                              : 'withdrawn from';
+                              
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Successfully withdrawn from ${pot.name}',
+                                'Successfully $actionText ${pot.name}',
                               ),
-                              backgroundColor: Colors.green,
+                              backgroundColor: transactionType == TransactionType.income
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
                           );
                         } else {
@@ -864,7 +961,9 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: transactionType == TransactionType.income
+                    ? Colors.green
+                    : Colors.red,
                 foregroundColor: Colors.white,
               ),
               child: isSubmitting
@@ -876,7 +975,9 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('WITHDRAW'),
+                  : Text(transactionType == TransactionType.income 
+                      ? 'DEPOSIT' 
+                      : 'WITHDRAW'),
             ),
           ],
         ),

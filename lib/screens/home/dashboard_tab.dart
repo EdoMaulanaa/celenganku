@@ -20,10 +20,15 @@ class DashboardTab extends StatefulWidget {
   State<DashboardTab> createState() => DashboardTabState();
 }
 
-class DashboardTabState extends State<DashboardTab> with SingleTickerProviderStateMixin {
+class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late List<Animation<Offset>> _slideAnimations = [];
   late List<Animation<double>> _fadeAnimations = [];
+  
+  // Store provider references for safer disposal
+  late TransactionProvider _transactionProvider;
+  late SavingsProvider _savingsProvider;
+  late CategoryProvider _categoryProvider;
   
   final List<GlobalKey> _cardKeys = [
     GlobalKey(), // Greeting card
@@ -37,6 +42,16 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
   void resetAnimation() {
     _animationController.reset();
     _animationController.forward();
+    
+    // Reset currentPotId when returning to the dashboard
+    // This ensures all transactions are shown, not just transactions from a specific pot
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      transactionProvider.setCurrentPotId(null);
+      
+      // Refresh data to ensure we're showing the latest
+      transactionProvider.refresh();
+    });
   }
 
   @override
@@ -58,21 +73,27 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
     // Set up change listeners
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupProviderListeners();
+      
+      // Reset currentPotId to ensure all transactions are shown in the dashboard
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      transactionProvider.setCurrentPotId(null);
     });
   }
   
   void _setupProviderListeners() {
+    // Store references to providers
+    _transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+    _savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+    _categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
+    
     // Listen for transaction changes
-    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
-    transactionProvider.addListener(_onDataChanged);
+    _transactionProvider.addListener(_onDataChanged);
     
     // Listen for savings pot changes
-    final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
-    savingsProvider.addListener(_onDataChanged);
+    _savingsProvider.addListener(_onDataChanged);
     
     // Listen for category changes
-    final categoryProvider = Provider.of<CategoryProvider>(context, listen: false);
-    categoryProvider.addListener(_onDataChanged);
+    _categoryProvider.addListener(_onDataChanged);
   }
   
   void _onDataChanged() {
@@ -119,13 +140,15 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
   void dispose() {
     _animationController.dispose();
     
-    // Remove listeners
-    Provider.of<TransactionProvider>(context, listen: false)
-        .removeListener(_onDataChanged);
-    Provider.of<SavingsProvider>(context, listen: false)
-        .removeListener(_onDataChanged);
-    Provider.of<CategoryProvider>(context, listen: false)
-        .removeListener(_onDataChanged);
+    // Remove listeners safely without accessing Provider directly in dispose
+    try {
+      // Remove listeners using stored provider references
+      _transactionProvider.removeListener(_onDataChanged);
+      _savingsProvider.removeListener(_onDataChanged);
+      _categoryProvider.removeListener(_onDataChanged);
+    } catch (e) {
+      print('Error removing listeners in DashboardTab dispose: $e');
+    }
     
     super.dispose();
   }
@@ -412,6 +435,29 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
   
   // Build expense breakdown chart
   Widget _buildExpenseBreakdownChart(TransactionProvider transactionProvider, CategoryProvider categoryProvider) {
+    final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+    // Always group by savings pot
+    final bool groupBySavingsPot = true;
+    
+    // Define a list of distinct colors for different pots - shared between chart and legend
+    final potColors = [
+      Colors.purple,
+      Colors.blue,
+      Colors.green,
+      Colors.amber,
+      Colors.orange,
+      Colors.red,
+      Colors.teal,
+      Colors.indigo,
+      Colors.pink,
+      Colors.brown,
+      Colors.cyan,
+      Colors.deepOrange,
+      Colors.lime,
+      Colors.deepPurple,
+      Colors.lightBlue,
+    ];
+    
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -425,30 +471,30 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
       },
       child: Card(
         key: _cardKeys[3],
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Expense Breakdown',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Expense Breakdown',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'How your money is spent by category',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
+              const SizedBox(height: 8),
+              Text(
+                'How your money is spent by savings pot',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 240,
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 240,
                 child: transactionProvider.transactions.isEmpty
                   ? const Center(
                       child: Text(
@@ -463,6 +509,8 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                           categories: categoryProvider.allCategories,
                           type: TransactionType.expense,
                           radius: 100,
+                          savingsPots: savingsProvider.savingsPots,
+                          groupBySavingsPot: groupBySavingsPot,
                         ),
                         sectionsSpace: 2,
                         centerSpaceRadius: 40,
@@ -470,10 +518,17 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
                       duration: const Duration(milliseconds: 500),
                       curve: Curves.easeInOut,
                     ),
-            ),
-            const SizedBox(height: 16),
-            _buildCategoryLegend(transactionProvider, categoryProvider, TransactionType.expense),
-          ],
+              ),
+              const SizedBox(height: 16),
+              _buildCategoryLegend(
+                transactionProvider, 
+                categoryProvider, 
+                TransactionType.expense,
+                true, // Always group by savings pot
+                savingsProvider.savingsPots,
+                potColors, // Pass the colors to the legend
+              ),
+            ],
           ),
         ),
       ),
@@ -484,96 +539,204 @@ class DashboardTabState extends State<DashboardTab> with SingleTickerProviderSta
   Widget _buildCategoryLegend(
     TransactionProvider transactionProvider,
     CategoryProvider categoryProvider,
-    TransactionType type
+    TransactionType type,
+    [bool groupBySavingsPot = true,  // Default to true
+    List<SavingsPot>? savingsPots,
+    List<Color>? potColors]
   ) {
     final transactions = transactionProvider.transactions
         .where((txn) => txn.type == type)
         .toList();
-    final categories = categoryProvider.allCategories
-        .where((cat) => cat.type == type)
-        .toList();
-    
+        
     if (transactions.isEmpty) return const SizedBox.shrink();
-    
-    // Map to store total amount per category
-    final categoryTotals = <String, double>{};
-    
-    // Calculate totals
-    for (final txn in transactions) {
-      final categoryId = txn.categoryId ?? 'uncategorized';
-      categoryTotals[categoryId] = (categoryTotals[categoryId] ?? 0) + txn.amount;
-    }
-    
-    // Sort by amount (descending)
-    final sortedEntries = categoryTotals.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    
-    // Take top 5 categories
-    final topCategories = sortedEntries.take(5).toList();
-    
-    // Total amount
-    final totalAmount = categoryTotals.values.fold<double>(0, (sum, amount) => sum + amount);
     
     // Format currency
     final formatter = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
     
-    return Column(
-      children: topCategories.map((entry) {
-        final categoryId = entry.key;
-        final amount = entry.value;
-        final percentage = (amount / totalAmount) * 100;
+    if (groupBySavingsPot && savingsPots != null) {
+      // Group transactions by savings pot ID
+      final potAmounts = <String, double>{};
+      final potNames = <String, String>{};
+      
+      for (final txn in transactions) {
+        final potId = txn.savingsPotId;
+        potAmounts[potId] = (potAmounts[potId] ?? 0) + txn.amount;
         
-        // Find category if available
-        TransactionCategory? category;
-        if (categoryId != 'uncategorized') {
-          try {
-            category = categories.firstWhere(
-              (cat) => cat.id == categoryId,
-            );
-          } catch (_) {
-            // Category not found
-            category = null;
-          }
+        // Find the pot name
+        try {
+          final pot = savingsPots.firstWhere(
+            (pot) => pot.id == potId,
+          );
+          potNames[potId] = pot.name;
+        } catch (_) {
+          potNames[potId] = 'Unknown';
         }
-        
-        final categoryName = category?.name ?? 'Uncategorized';
-        final categoryColor = category?.color ?? Colors.grey;
-        
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Row(
-            children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: categoryColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(categoryName),
-              ),
-              Text(
-                '${percentage.toStringAsFixed(1)}%',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                formatter.format(amount),
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
-            ],
+      }
+      
+      // Filter out pots with no progress (amount = 0)
+      potAmounts.removeWhere((key, value) => value <= 0);
+      
+      if (potAmounts.isEmpty) {
+        return const Center(
+          child: Text(
+            'No expense data available by savings pot',
+            style: TextStyle(color: Colors.grey),
           ),
         );
-      }).toList(),
-    );
+      }
+      
+      // Sort by amount (descending)
+      final sortedEntries = potAmounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      
+      // Total amount
+      final totalAmount = potAmounts.values.fold<double>(0, (sum, amount) => sum + amount);
+      
+      // Use the provided colors or default ones
+      final colors = potColors ?? [
+        Colors.purple,
+        Colors.blue,
+        Colors.green,
+        Colors.amber,
+        Colors.orange,
+        Colors.red,
+        Colors.teal,
+        Colors.indigo,
+        Colors.pink,
+        Colors.brown,
+        Colors.cyan,
+        Colors.deepOrange,
+        Colors.lime,
+        Colors.deepPurple,
+        Colors.lightBlue,
+      ];
+      
+      return Column(
+        children: sortedEntries.asMap().entries.map((entry) {
+          final index = entry.key;
+          final potId = entry.value.key;
+          final amount = entry.value.value;
+          final percentage = (amount / totalAmount) * 100;
+          final potName = potNames[potId] ?? 'Unknown';
+          final color = colors[index % colors.length];
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(potName),
+                ),
+                Text(
+                  '${percentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatter.format(amount),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    } else {
+      // Original behavior - group by category
+      final categories = categoryProvider.allCategories
+          .where((cat) => cat.type == type)
+          .toList();
+      
+      // Map to store total amount per category
+      final categoryTotals = <String, double>{};
+      
+      // Calculate totals
+      for (final txn in transactions) {
+        final categoryId = txn.categoryId ?? 'uncategorized';
+        categoryTotals[categoryId] = (categoryTotals[categoryId] ?? 0) + txn.amount;
+      }
+      
+      // Sort by amount (descending)
+      final sortedEntries = categoryTotals.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      
+      // Take top 5 categories
+      final topCategories = sortedEntries.take(5).toList();
+      
+      // Total amount
+      final totalAmount = categoryTotals.values.fold<double>(0, (sum, amount) => sum + amount);
+      
+      return Column(
+        children: topCategories.map((entry) {
+          final categoryId = entry.key;
+          final amount = entry.value;
+          final percentage = (amount / totalAmount) * 100;
+          
+          // Find category if available
+          TransactionCategory? category;
+          if (categoryId != 'uncategorized') {
+            try {
+              category = categories.firstWhere(
+                (cat) => cat.id == categoryId,
+              );
+            } catch (_) {
+              // Category not found
+              category = null;
+            }
+          }
+          
+          final categoryName = category?.name ?? 'Uncategorized';
+          final categoryColor = category?.color ?? Colors.grey;
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: categoryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(categoryName),
+                ),
+                Text(
+                  '${percentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  formatter.format(amount),
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
   }
   
   // Build recent pots section

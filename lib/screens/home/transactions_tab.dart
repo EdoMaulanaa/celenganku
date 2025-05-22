@@ -12,7 +12,7 @@ class TransactionsTab extends StatefulWidget {
   State<TransactionsTab> createState() => TransactionsTabState();
 }
 
-class TransactionsTabState extends State<TransactionsTab> with SingleTickerProviderStateMixin {
+class TransactionsTabState extends State<TransactionsTab> with TickerProviderStateMixin {
   bool _isLoading = false;
   late AnimationController _animationController;
   
@@ -26,6 +26,9 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
     
     // Using Future.microtask to ensure this doesn't run during build phase
     Future.microtask(() {
+      // Ensure we're loading transactions from all pots by setting currentPotId to null
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      transactionProvider.setCurrentPotId(null);
       _loadTransactions();
       _animationController.forward();
     });
@@ -41,6 +44,13 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
   void resetAnimation() {
     _animationController.reset();
     _animationController.forward();
+    
+    // Ensure we're showing all transactions when tab is reset
+    Future.microtask(() {
+      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+      transactionProvider.setCurrentPotId(null);
+      _loadTransactions();
+    });
   }
   
   Future<void> _loadTransactions() async {
@@ -64,11 +74,40 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
 
   @override
   Widget build(BuildContext context) {
+    final savingsProvider = Provider.of<SavingsProvider>(context);
+    final transactionProvider = Provider.of<TransactionProvider>(context);
+    final String? currentPotId = transactionProvider.currentPotId;
+    final String filterText = currentPotId != null 
+        ? 'Filtering: ${savingsProvider.getSavingsPotById(currentPotId)?.name ?? 'Unknown'}'
+        : 'All Transactions';
+        
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transactions'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Transactions'),
+            if (currentPotId != null)
+              Text(
+                filterText,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.normal,
+                  color: Colors.white70,
+                ),
+              ),
+          ],
+        ),
         elevation: 0,
         actions: [
+          // Filter button
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              _showFilterDialog(context);
+            },
+            tooltip: 'Filter by savings pot',
+          ),
           // Refresh button
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -76,6 +115,7 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
               _loadTransactions();
               _animationController.reset();
             },
+            tooltip: 'Refresh transactions',
           ),
         ],
       ),
@@ -94,6 +134,7 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
   
   Widget _buildTransactionsList() {
     final transactionProvider = Provider.of<TransactionProvider>(context);
+    final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
     final transactions = transactionProvider.transactions;
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
     
@@ -106,6 +147,9 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
       padding: const EdgeInsets.all(16),
       itemBuilder: (context, index) {
         final transaction = transactions[index];
+        // Get pot name
+        final pot = savingsProvider.getSavingsPotById(transaction.savingsPotId);
+        final potName = pot?.name ?? 'Unknown Pot';
         
         // Create staggered animation for each item
         final animation = Tween<Offset>(
@@ -163,12 +207,26 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                subtitle: Text(
-                  DateFormat('MMM dd, yyyy').format(transaction.date),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                  ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DateFormat('MMM dd, yyyy').format(transaction.date),
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      "From: $potName",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
+                isThreeLine: true,
                 trailing: Text(
                   (transaction.type == TransactionType.income ? '+ ' : '- ') +
                       currencyFormat.format(transaction.amount),
@@ -424,6 +482,75 @@ class TransactionsTabState extends State<TransactionsTab> with SingleTickerProvi
           ),
         ],
       ),
+    );
+  }
+  
+  void _showFilterDialog(BuildContext context) {
+    final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
+    final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+    final savingsPots = savingsProvider.savingsPots;
+    final String? currentPotId = transactionProvider.currentPotId;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Filter Transactions'),
+          content: Container(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Option to show all transactions
+                ListTile(
+                  title: const Text('All Transactions'),
+                  leading: Radio<String?>(
+                    value: null,
+                    groupValue: currentPotId,
+                    onChanged: (value) {
+                      transactionProvider.setCurrentPotId(value);
+                      Navigator.of(context).pop();
+                      _loadTransactions();
+                    },
+                  ),
+                ),
+                const Divider(),
+                // List of savings pots
+                Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: savingsPots.map((pot) => 
+                        ListTile(
+                          title: Text(pot.name),
+                          leading: Radio<String?>(
+                            value: pot.id,
+                            groupValue: currentPotId,
+                            onChanged: (value) {
+                              transactionProvider.setCurrentPotId(value);
+                              Navigator.of(context).pop();
+                              _loadTransactions();
+                            },
+                          ),
+                        )
+                      ).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CANCEL'),
+            ),
+          ],
+        );
+      },
     );
   }
 } 
