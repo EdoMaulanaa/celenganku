@@ -185,7 +185,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
               // Expense breakdown
               _buildExpenseBreakdownChart(transactionProvider, categoryProvider),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               
               // Recent pots 
               _buildRecentPotsSection(savingsProvider),
@@ -779,7 +779,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           ],
         ),
         
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         
         // Pots list
         if (savingsProvider.status == SavingsStatus.loading)
@@ -808,9 +808,9 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
   // Build pot card
   Widget _buildPotCard(SavingsPot pot) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
