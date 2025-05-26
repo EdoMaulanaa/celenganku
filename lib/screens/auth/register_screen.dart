@@ -34,11 +34,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Validate password confirmation
   String? _validateConfirmPassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Confirm password is required';
+      return 'Konfirmasi password harus diisi';
     }
     
     if (value != _passwordController.text) {
-      return 'Passwords do not match';
+      return 'Password tidak sama';
     }
     
     return null;
@@ -70,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registration successful! Please check your email to confirm your account.'),
+          content: Text('Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun.'),
           backgroundColor: Colors.green,
         ),
       );
@@ -89,7 +89,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Failed to register'),
+          content: Text(authProvider.errorMessage ?? 'Gagal mendaftar'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -105,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register'),
+        title: const Text('Daftar'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -142,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   
                   // Welcome text
                   const Text(
-                    'Create an account',
+                    'Buat Akun',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 20,
@@ -153,7 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 8),
                   
                   const Text(
-                    'Sign up to start saving',
+                    'Daftar untuk mulai menabung',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -167,8 +167,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _usernameController,
                     decoration: const InputDecoration(
-                      labelText: 'Username (optional)',
-                      hintText: 'Enter a username',
+                      labelText: 'Username (opsional)',
+                      hintText: 'Masukkan username',
                       prefixIcon: Icon(Icons.person_outlined),
                     ),
                     validator: (value) {
@@ -187,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _emailController,
                     decoration: const InputDecoration(
                       labelText: 'Email',
-                      hintText: 'Enter your email',
+                      hintText: 'Masukkan email anda',
                       prefixIcon: Icon(Icons.email_outlined),
                     ),
                     keyboardType: TextInputType.emailAddress,
@@ -202,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      hintText: 'Enter your password',
+                      hintText: 'Masukkan password anda',
                       prefixIcon: const Icon(Icons.lock_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -228,8 +228,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: InputDecoration(
-                      labelText: 'Confirm Password',
-                      hintText: 'Confirm your password',
+                      labelText: 'Konfirmasi Password',
+                      hintText: 'Konfirmasi password anda',
                       prefixIcon: const Icon(Icons.lock_outlined),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -267,7 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('Sign Up'),
+                        : const Text('Daftar'),
                   ),
                   
                   const SizedBox(height: 24),
@@ -276,10 +276,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account?'),
+                      const Text('Sudah memiliki akun?'),
                       TextButton(
                         onPressed: _navigateToLogin,
-                        child: const Text('Sign In'),
+                        child: const Text('Masuk'),
                       ),
                     ],
                   ),

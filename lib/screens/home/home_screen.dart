@@ -168,19 +168,19 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
-            label: 'Dashboard',
+            label: 'Beranda',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.savings_outlined),
-            label: 'Pots',
+            label: 'Celengan',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history_outlined),
-            label: 'Transactions',
+            label: 'Transaksi',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outlined),
-            label: 'Profile',
+            label: 'Profil',
           ),
         ],
       ),

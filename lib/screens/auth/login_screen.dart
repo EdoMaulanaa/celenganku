@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // Welcome text
                   const Text(
-                    'Welcome back',
+                    'Selamat Datang Kembali',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 20,
@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   
                   const Text(
-                    'Sign in to continue',
+                    'Masuk untuk melanjutkan',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
@@ -174,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _emailController,
                     decoration: InputDecoration(
                       labelText: 'Email',
-                      hintText: 'Enter your email',
+                      hintText: 'Masukkan email anda',
                       errorText: _emailError,
                       prefixIcon: const Icon(Icons.email_outlined),
                       errorStyle: const TextStyle(color: Colors.red),
@@ -198,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _passwordController,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      hintText: 'Enter your password',
+                      hintText: 'Masukkan password anda',
                       errorText: _passwordError,
                       prefixIcon: const Icon(Icons.lock_outlined),
                       errorStyle: const TextStyle(color: Colors.red),
@@ -233,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: _navigateToForgotPassword,
-                      child: const Text('Forgot Password?'),
+                      child: const Text('Lupa Password?'),
                     ),
                   ),
                   
@@ -254,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('Sign In'),
+                        : const Text('Masuk'),
                   ),
                   
                   const SizedBox(height: 24),
@@ -263,10 +263,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account?"),
+                      const Text("Belum punya akun?"),
                       TextButton(
                         onPressed: _navigateToRegister,
-                        child: const Text('Register'),
+                        child: const Text('Daftar'),
                       ),
                     ],
                   ),

@@ -240,7 +240,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      'Hello, ${authProvider.profile?.username ?? authProvider.user?.email?.split('@').first ?? 'User'}',
+                      'Halo, ${authProvider.profile?.username ?? authProvider.user?.email?.split('@').first ?? 'Pengguna'}',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -249,7 +249,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                   const SizedBox(height: 4),
                   
                   Text(
-                    'Welcome to your savings dashboard',
+                    'Selamat datang di dashboard tabungan Anda',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
@@ -288,7 +288,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           children: [
             // Balance label
             const Text(
-              'Total Balance',
+              'Total Saldo',
               style: TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
@@ -321,7 +321,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                 const SizedBox(width: 8),
                 
                 Text(
-                  '${savingsProvider.savingsPots.length} Savings Pots',
+                  '${savingsProvider.savingsPots.length} Celengan',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 14,
@@ -358,7 +358,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Monthly Savings',
+              'Tabungan Bulanan',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -366,7 +366,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
             ),
             const SizedBox(height: 8),
             const Text(
-              'Net savings per month over the last 6 months',
+              'Tabungan bersih per bulan selama 6 bulan terakhir',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -378,7 +378,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                 child: transactionProvider.transactions.isEmpty
                   ? const Center(
                       child: Text(
-                        'No transaction data available',
+                        'Tidak ada data transaksi',
                         style: TextStyle(color: Colors.grey),
                       ),
                     )
@@ -478,7 +478,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Expense Breakdown',
+                'Rincian Pengeluaran',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -486,7 +486,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
               ),
               const SizedBox(height: 8),
               Text(
-                'How your money is spent by savings pot',
+                'Bagaimana uang Anda digunakan per celengan',
                 style: const TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
@@ -498,7 +498,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                 child: transactionProvider.transactions.isEmpty
                   ? const Center(
                       child: Text(
-                        'No expense data available',
+                        'Tidak ada data pengeluaran per celengan',
                         style: TextStyle(color: Colors.grey),
                       ),
                     )
@@ -579,7 +579,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
       if (potAmounts.isEmpty) {
         return const Center(
           child: Text(
-            'No expense data available by savings pot',
+            'Tidak ada data pengeluaran per celengan',
             style: TextStyle(color: Colors.grey),
           ),
         );
@@ -698,7 +698,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
             }
           }
           
-          final categoryName = category?.name ?? 'Uncategorized';
+          final categoryName = category?.name ?? 'Tidak Terkategori';
           final categoryColor = category?.color ?? Colors.grey;
           
           return Padding(
@@ -761,7 +761,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Your Savings Pots',
+              'Celengan Anda',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -774,7 +774,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                 // Navigate to Pots tab (index 1)
                 HomeScreen.navigateToTab(context, 1);
               },
-              child: const Text('View All'),
+              child: const Text('Lihat Semua'),
             ),
           ],
         ),
@@ -846,7 +846,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                       ),
                       if (pot.targetAmount != null)
                         Text(
-                          '${pot.progressPercentage.toStringAsFixed(1)}% of target',
+                          '${pot.progressPercentage.toStringAsFixed(1)}% dari target',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -870,7 +870,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
                     ),
                     if (pot.targetAmount != null)
                       Text(
-                        'of ${Formatter.formatCurrency(pot.targetAmount!)}',
+                        'dari ${Formatter.formatCurrency(pot.targetAmount!)}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -916,7 +916,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           ),
           const SizedBox(height: 16),
           const Text(
-            'No savings pots yet',
+            'Belum ada celengan',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -924,7 +924,7 @@ class DashboardTabState extends State<DashboardTab> with TickerProviderStateMixi
           ),
           const SizedBox(height: 8),
           const Text(
-            'Create a pot to start saving',
+            'Buat celengan untuk mulai menabung',
             style: TextStyle(
               color: Colors.grey,
             ),

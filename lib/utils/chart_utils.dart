@@ -343,6 +343,9 @@ class ChartUtils {
       actualSpots.add(FlSpot(daysElapsed.toDouble(), cumulativeAmount));
     }
     
+    // Fixed color for progress line that works in both light and dark mode
+    final progressLineColor = Colors.blue;
+    
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -351,13 +354,13 @@ class ChartUtils {
         verticalInterval: totalDuration / 5,
         getDrawingHorizontalLine: (value) {
           return FlLine(
-            color: Colors.grey.shade300,
+            color: Colors.grey.withOpacity(0.3),
             strokeWidth: 1,
           );
         },
         getDrawingVerticalLine: (value) {
           return FlLine(
-            color: Colors.grey.shade300,
+            color: Colors.grey.withOpacity(0.3),
             strokeWidth: 1,
           );
         },
@@ -376,8 +379,8 @@ class ChartUtils {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     '${date.day}/${date.month}',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
+                    style: const TextStyle(
+                      color: Colors.grey,
                       fontSize: 12,
                     ),
                   ),
@@ -398,8 +401,8 @@ class ChartUtils {
                   padding: const EdgeInsets.only(right: 8.0),
                   child: Text(
                     value >= 1000 ? '${(value / 1000).toStringAsFixed(1)}k' : value.toInt().toString(),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
+                    style: const TextStyle(
+                      color: Colors.grey,
                       fontSize: 12,
                     ),
                   ),
@@ -418,7 +421,7 @@ class ChartUtils {
       ),
       borderData: FlBorderData(
         show: true,
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Colors.grey.withOpacity(0.3)),
       ),
       minX: 0,
       maxX: totalDuration.toDouble(),
@@ -429,7 +432,7 @@ class ChartUtils {
         LineChartBarData(
           spots: targetSpots,
           isCurved: false,
-          color: Colors.grey.shade500,
+          color: Colors.grey.withOpacity(0.7),
           barWidth: 2,
           isStrokeCapRound: true,
           dotData: const FlDotData(show: false),
@@ -439,7 +442,7 @@ class ChartUtils {
         LineChartBarData(
           spots: actualSpots,
           isCurved: true,
-          color: primaryColor,
+          color: progressLineColor,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
@@ -447,7 +450,7 @@ class ChartUtils {
             getDotPainter: (spot, percent, barData, index) {
               return FlDotCirclePainter(
                 radius: 4,
-                color: primaryColor,
+                color: progressLineColor,
                 strokeWidth: 1,
                 strokeColor: Colors.white,
               );
@@ -455,7 +458,7 @@ class ChartUtils {
           ),
           belowBarData: BarAreaData(
             show: true,
-            color: primaryColor.withOpacity(0.2),
+            color: progressLineColor.withOpacity(0.2),
           ),
         ),
       ],

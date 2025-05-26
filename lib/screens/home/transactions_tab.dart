@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/savings_provider.dart';
 import '../../models/transaction.dart';
@@ -23,6 +24,9 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+    
+    // Inisialisasi format tanggal Bahasa Indonesia
+    initializeDateFormatting('id_ID', null);
     
     // Using Future.microtask to ensure this doesn't run during build phase
     Future.microtask(() {
@@ -78,15 +82,15 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
     final transactionProvider = Provider.of<TransactionProvider>(context);
     final String? currentPotId = transactionProvider.currentPotId;
     final String filterText = currentPotId != null 
-        ? 'Filtering: ${savingsProvider.getSavingsPotById(currentPotId)?.name ?? 'Unknown'}'
-        : 'All Transactions';
+        ? 'Filter: ${savingsProvider.getSavingsPotById(currentPotId)?.name ?? 'Tidak diketahui'}'
+        : 'Semua Transaksi';
         
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Transactions'),
+            const Text('Transaksi'),
             if (currentPotId != null)
               Text(
                 filterText,
@@ -106,7 +110,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
             onPressed: () {
               _showFilterDialog(context);
             },
-            tooltip: 'Filter by savings pot',
+            tooltip: 'Filter berdasarkan celengan',
           ),
           // Refresh button
           IconButton(
@@ -115,7 +119,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               _loadTransactions();
               _animationController.reset();
             },
-            tooltip: 'Refresh transactions',
+            tooltip: 'Perbarui transaksi',
           ),
         ],
       ),
@@ -149,7 +153,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
         final transaction = transactions[index];
         // Get pot name
         final pot = savingsProvider.getSavingsPotById(transaction.savingsPotId);
-        final potName = pot?.name ?? 'Unknown Pot';
+        final potName = pot?.name ?? 'Celengan Tidak Diketahui';
         
         // Create staggered animation for each item
         final animation = Tween<Offset>(
@@ -202,7 +206,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
                   ),
                 ),
                 title: Text(
-                  transaction.notes ?? 'Transaction',
+                  transaction.notes ?? 'Transaksi',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
@@ -211,13 +215,13 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat('MMM dd, yyyy').format(transaction.date),
+                      DateFormat('d MMM yyyy', 'id_ID').format(transaction.date),
                       style: TextStyle(
                         color: Colors.grey[600],
                       ),
                     ),
                     Text(
-                      "From: $potName",
+                      "Dari: $potName",
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w500,
@@ -266,7 +270,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
             ),
             const SizedBox(height: 16),
             const Text(
-              'No transactions yet',
+              'Belum ada transaksi',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -274,7 +278,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
             ),
             const SizedBox(height: 8),
             const Text(
-              'Your transactions will appear here',
+              'Transaksi Anda akan muncul di sini',
               style: TextStyle(
                 color: Colors.grey,
               ),
@@ -302,7 +306,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
             // Header
             Center(
               child: Text(
-                'Transaction Details',
+                'Detail Transaksi',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -318,13 +322,13 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 Icon(Icons.savings_outlined, color: Colors.grey),
                 const SizedBox(width: 12),
-                const Text('Savings Pot:', style: TextStyle(color: Colors.grey)),
+                const Text('Celengan:', style: TextStyle(color: Colors.grey)),
                 const Spacer(),
                 Consumer<SavingsProvider>(
                   builder: (context, savingsProvider, _) {
                     final pot = savingsProvider.getSavingsPotById(transaction.savingsPotId);
                     return Text(
-                      pot?.name ?? 'Unknown Pot',
+                      pot?.name ?? 'Celengan Tidak Diketahui',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                       ),
@@ -341,7 +345,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 const Icon(Icons.category_outlined, color: Colors.grey),
                 const SizedBox(width: 12),
-                const Text('Type:', style: TextStyle(color: Colors.grey)),
+                const Text('Jenis:', style: TextStyle(color: Colors.grey)),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -353,8 +357,8 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
                   ),
                   child: Text(
                     transaction.type == TransactionType.income
-                        ? 'Income'
-                        : 'Expense',
+                        ? 'Pemasukan'
+                        : 'Pengeluaran',
                     style: TextStyle(
                       color: transaction.type == TransactionType.income
                           ? Colors.green
@@ -373,7 +377,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 const Icon(Icons.monetization_on_outlined, color: Colors.grey),
                 const SizedBox(width: 12),
-                const Text('Amount:', style: TextStyle(color: Colors.grey)),
+                const Text('Jumlah:', style: TextStyle(color: Colors.grey)),
                 const Spacer(),
                 Text(
                   currencyFormat.format(transaction.amount),
@@ -392,10 +396,10 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 const Icon(Icons.calendar_today_outlined, color: Colors.grey),
                 const SizedBox(width: 12),
-                const Text('Date:', style: TextStyle(color: Colors.grey)),
+                const Text('Tanggal:', style: TextStyle(color: Colors.grey)),
                 const Spacer(),
                 Text(
-                  DateFormat('EEEE, MMM d, yyyy').format(transaction.date),
+                  DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(transaction.date),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                   ),
@@ -411,11 +415,11 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 const Icon(Icons.description_outlined, color: Colors.grey),
                 const SizedBox(width: 12),
-                const Text('Notes:', style: TextStyle(color: Colors.grey)),
+                const Text('Catatan:', style: TextStyle(color: Colors.grey)),
                 const Spacer(),
                 Flexible(
                   child: Text(
-                    transaction.notes ?? 'No notes',
+                    transaction.notes ?? 'Tidak ada catatan',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
@@ -435,7 +439,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
                   _confirmDeleteTransaction(transaction);
                 },
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: const Text('Delete Transaction', style: TextStyle(color: Colors.red)),
+                label: const Text('Hapus Transaksi', style: TextStyle(color: Colors.red)),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Colors.red),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -452,12 +456,12 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Transaction'),
-        content: const Text('Are you sure you want to delete this transaction? This action cannot be undone.'),
+        title: const Text('Hapus Transaksi'),
+        content: const Text('Apakah Anda yakin ingin menghapus transaksi ini? Tindakan ini tidak dapat dibatalkan.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () async {
@@ -472,13 +476,13 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Transaction deleted successfully'),
+                    content: Text('Transaksi berhasil dihapus'),
                     backgroundColor: Colors.green,
                   ),
                 );
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -495,7 +499,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Filter Transactions'),
+          title: const Text('Filter Transaksi'),
           content: Container(
             width: double.maxFinite,
             child: Column(
@@ -503,7 +507,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
               children: [
                 // Option to show all transactions
                 ListTile(
-                  title: const Text('All Transactions'),
+                  title: const Text('Semua Transaksi'),
                   leading: Radio<String?>(
                     value: null,
                     groupValue: currentPotId,
@@ -546,7 +550,7 @@ class TransactionsTabState extends State<TransactionsTab> with TickerProviderSta
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('CANCEL'),
+              child: const Text('BATAL'),
             ),
           ],
         );

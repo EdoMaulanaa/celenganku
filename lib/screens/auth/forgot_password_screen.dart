@@ -51,7 +51,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Failed to send reset email'),
+          content: Text(authProvider.errorMessage ?? 'Gagal mengirim email reset'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -69,7 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Forgot Password'),
+        title: const Text('Lupa Password'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -102,7 +102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           
           // Title
           const Text(
-            'Forgot Password',
+            'Lupa Password',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 24,
@@ -114,7 +114,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           
           // Instructions
           const Text(
-            'Enter your email address and we will send you instructions to reset your password.',
+            'Masukkan alamat email Anda dan kami akan mengirimkan instruksi untuk mengatur ulang password Anda.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16),
           ),
@@ -126,7 +126,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             controller: _emailController,
             decoration: const InputDecoration(
               labelText: 'Email',
-              hintText: 'Enter your email',
+              hintText: 'Masukkan email anda',
               prefixIcon: Icon(Icons.email_outlined),
             ),
             keyboardType: TextInputType.emailAddress,
@@ -160,7 +160,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           // Back to login link
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Back to Login'),
+            child: const Text('Kembali ke Login'),
           ),
         ],
       ),
@@ -184,7 +184,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         
         // Success title
         const Text(
-          'Email Sent',
+          'Email Terkirim',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 24,
@@ -196,7 +196,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         
         // Success message
         Text(
-          'We have sent password reset instructions to ${_emailController.text}',
+          'Kami telah mengirimkan instruksi reset password ke ${_emailController.text}',
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 16),
         ),
@@ -209,7 +209,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
-          child: const Text('Return to Login'),
+          child: const Text('Kembali ke Login'),
         ),
       ],
     );

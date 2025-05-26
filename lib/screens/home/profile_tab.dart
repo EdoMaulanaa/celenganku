@@ -108,7 +108,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 60.0, left: 20.0),
                       child: Text(
-                        'Profile',
+                        'Profil',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -199,7 +199,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                'Account Settings',
+                'Pengaturan Akun',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -253,7 +253,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                               ),
                             ),
                             title: const Text(
-                              'Edit Profile',
+                              'Edit Profil',
                               style: TextStyle(fontWeight: FontWeight.w500),
                             ),
                             trailing: Icon(
@@ -298,7 +298,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                               ),
                             ),
                             title: const Text(
-                              'Change Password',
+                              'Ganti Password',
                               style: TextStyle(fontWeight: FontWeight.w500),
                             ),
                             trailing: Icon(
@@ -334,7 +334,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                         ),
                       ),
                       title: const Text(
-                        'Dark Mode',
+                        'Mode Gelap',
                         style: TextStyle(fontWeight: FontWeight.w500),
                       ),
                       value: themeProvider.isDarkMode,
@@ -353,7 +353,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text(
-                'Information',
+                'Informasi',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -395,7 +395,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                         ),
                       ),
                       title: const Text(
-                        'About',
+                        'Tentang',
                         style: TextStyle(fontWeight: FontWeight.w500),
                       ),
                       trailing: Icon(
@@ -429,7 +429,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                         ),
                       ),
                       title: const Text(
-                        'Help & Support',
+                        'Bantuan & Dukungan',
                         style: TextStyle(fontWeight: FontWeight.w500),
                       ),
                       trailing: Icon(
@@ -460,16 +460,16 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                     final result = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Sign Out'),
-                        content: const Text('Are you sure you want to sign out?'),
+                        title: const Text('Keluar'),
+                        content: const Text('Apakah Anda yakin ingin keluar?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Cancel'),
+                            child: const Text('Batal'),
                           ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text('Sign Out'),
+                            child: const Text('Keluar'),
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.red,
                             ),
@@ -491,7 +491,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
                     }
                   },
                   icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sign Out'),
+                  label: const Text('Keluar'),
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.redAccent,
@@ -511,7 +511,7 @@ class ProfileTabState extends State<ProfileTab> with TickerProviderStateMixin {
               index: 4,
               child: Center(
                 child: Text(
-                  'Version 1.0.0',
+                  'Versi 1.0.0',
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodySmall?.color,
                     fontSize: 12,

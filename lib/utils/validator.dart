@@ -2,14 +2,14 @@ class Validator {
   // Email validation
   static String? validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Email is required';
+      return 'Email harus diisi';
     }
     
     // Regular expression for email validation
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     
     if (!emailRegex.hasMatch(value)) {
-      return 'Enter a valid email address';
+      return 'Masukkan alamat email yang valid';
     }
     
     return null;
@@ -18,11 +18,11 @@ class Validator {
   // Password validation
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return 'Password harus diisi';
     }
     
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return 'Password minimal 6 karakter';
     }
     
     return null;
@@ -31,7 +31,7 @@ class Validator {
   // Required field validation
   static String? validateRequired(String? value, String fieldName) {
     if (value == null || value.trim().isEmpty) {
-      return '$fieldName is required';
+      return '$fieldName harus diisi';
     }
     
     return null;
@@ -40,11 +40,11 @@ class Validator {
   // Minimum length validation
   static String? validateMinLength(String? value, int minLength, String fieldName) {
     if (value == null || value.isEmpty) {
-      return '$fieldName is required';
+      return '$fieldName harus diisi';
     }
     
     if (value.length < minLength) {
-      return '$fieldName must be at least $minLength characters';
+      return '$fieldName minimal $minLength karakter';
     }
     
     return null;
@@ -53,11 +53,11 @@ class Validator {
   // Number validation
   static String? validateNumber(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
-      return '$fieldName is required';
+      return '$fieldName harus diisi';
     }
     
     if (double.tryParse(value) == null) {
-      return '$fieldName must be a number';
+      return '$fieldName harus berupa angka';
     }
     
     return null;
@@ -66,17 +66,17 @@ class Validator {
   // Positive number validation
   static String? validatePositiveNumber(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
-      return '$fieldName is required';
+      return '$fieldName harus diisi';
     }
     
     final number = double.tryParse(value);
     
     if (number == null) {
-      return '$fieldName must be a number';
+      return '$fieldName harus berupa angka';
     }
     
     if (number <= 0) {
-      return '$fieldName must be greater than zero';
+      return '$fieldName harus lebih besar dari nol';
     }
     
     return null;
@@ -93,7 +93,7 @@ class Validator {
     final valueDate = DateTime(value.year, value.month, value.day);
     
     if (valueDate.isBefore(today)) {
-      return 'Target date must be in the future';
+      return 'Tanggal target harus di masa depan';
     }
     
     return null;
@@ -102,18 +102,18 @@ class Validator {
   // Username validation
   static String? validateUsername(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Username is required';
+      return 'Username harus diisi';
     }
     
     if (value.length < 3) {
-      return 'Username must be at least 3 characters';
+      return 'Username minimal 3 karakter';
     }
     
     // Only allow alphanumeric and underscore
     final usernameRegex = RegExp(r'^[a-zA-Z0-9_]+$');
     
     if (!usernameRegex.hasMatch(value)) {
-      return 'Username can only contain letters, numbers, and underscore';
+      return 'Username hanya boleh berisi huruf, angka, dan garis bawah';
     }
     
     return null;

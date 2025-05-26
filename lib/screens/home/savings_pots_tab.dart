@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../../providers/savings_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/savings_pot.dart';
@@ -29,6 +30,9 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
   @override
   void initState() {
     super.initState();
+    // Initialize locale for Indonesian date formatting
+    initializeDateFormatting('id_ID', null);
+    
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -162,7 +166,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                         focusNode: _searchFocusNode,
                         autofocus: true,
                         decoration: InputDecoration(
-                          hintText: 'Search pots...',
+                          hintText: 'Cari celengan...',
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
                           suffixIcon: _searchController.text.isNotEmpty
@@ -185,7 +189,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   )
                 : Opacity(
                     opacity: 1 - _searchOpacityAnimation.value,
-                    child: const Text('Savings Pots'),
+                    child: const Text('Celengan'),
                   );
           },
         ),
@@ -262,7 +266,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             const Icon(Icons.search_off, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
             Text(
-              'No pots found matching "${_searchController.text}"',
+              'Tidak ditemukan celengan yang cocok dengan "${_searchController.text}"',
               style: TextStyle(fontSize: 16, color: Colors.grey[700]),
               textAlign: TextAlign.center,
             ),
@@ -352,7 +356,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   
                   // Balance
                   Text(
-                    'Current Balance: ${currencyFormat.format(pot.currentBalance)}',
+                    'Saldo: ${currencyFormat.format(pot.currentBalance)}',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -399,7 +403,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   if (pot.targetDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Target Date: ${DateFormat('MMM dd, yyyy').format(pot.targetDate!)}',
+                      'Tanggal Target: ${DateFormat('d MMM yyyy', 'id_ID').format(pot.targetDate!)}',
                       style: TextStyle(
                         color: Colors.grey[600],
                       ),
@@ -433,7 +437,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             ),
             const SizedBox(height: 16),
             const Text(
-              'No savings pots yet',
+              'Belum ada celengan',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -441,7 +445,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             ),
             const SizedBox(height: 8),
             const Text(
-              'Create a pot to start saving',
+              'Buat celengan untuk mulai menabung',
               style: TextStyle(
                 color: Colors.grey,
               ),
@@ -450,7 +454,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             ElevatedButton.icon(
               onPressed: showCreatePotDialog,
               icon: const Icon(Icons.add),
-              label: const Text('Create New Pot'),
+              label: const Text('Buat Celengan Baru'),
             ),
             const SizedBox(height: 12),
             TextButton.icon(
@@ -465,7 +469,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                 });
               },
               icon: const Icon(Icons.search),
-              label: const Text('Search Pots'),
+              label: const Text('Cari Celengan'),
             ),
           ],
         ),
@@ -542,9 +546,9 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     
                     const SizedBox(height: 24),
                     
-                    // Balance
+                    // Current Balance
                     const Text(
-                      'Current Balance',
+                      'Saldo Saat Ini',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -571,7 +575,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Target Amount',
+                                  'Jumlah Target',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -594,7 +598,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Target Date',
+                                    'Tanggal Target',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
@@ -602,7 +606,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    DateFormat('MMM dd, yyyy').format(pot.targetDate!),
+                                    DateFormat('d MMM yyyy', 'id_ID').format(pot.targetDate!),
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -618,7 +622,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       
                       // Progress
                       const Text(
-                        'Progress',
+                        'Progres',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -655,7 +659,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                             builder: (context, snapshot) {
                               if (snapshot.hasData && snapshot.data != null && snapshot.data! > 0) {
                                 return Text(
-                                  'Need ${currencyFormat.format(snapshot.data!)} / day',
+                                  'Butuh ${currencyFormat.format(snapshot.data!)} / hari',
                                   style: TextStyle(
                                     color: Colors.orange[700],
                                     fontWeight: FontWeight.bold,
@@ -679,7 +683,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               final days = snapshot.data!;
                               if (days <= 0) {
                                 return Text(
-                                  'Target date has passed!',
+                                  'Tanggal target telah berlalu!',
                                   style: TextStyle(
                                     color: Colors.red[700],
                                     fontWeight: FontWeight.bold,
@@ -687,7 +691,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                                 );
                               }
                               return Text(
-                                '$days days remaining',
+                                '$days hari tersisa',
                                 style: TextStyle(
                                   color: days < 7 ? Colors.red[700] : Colors.grey[600],
                                 ),
@@ -706,7 +710,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       children: [
                         _buildActionButton(
                           icon: Icons.add,
-                          label: 'Add',
+                          label: 'Tambah',
                           color: Colors.green,
                           onTap: () {
                             Navigator.pop(context);
@@ -716,7 +720,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                         ),
                         _buildActionButton(
                           icon: Icons.remove,
-                          label: 'Withdraw',
+                          label: 'Tarik',
                           color: Colors.red,
                           onTap: () {
                             Navigator.pop(context);
@@ -736,7 +740,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                         ),
                         _buildActionButton(
                           icon: Icons.delete,
-                          label: 'Delete',
+                          label: 'Hapus',
                           color: Colors.red[900]!,
                           onTap: () {
                             Navigator.pop(context);
@@ -751,14 +755,14 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     
                     // Created/updated info
                     Text(
-                      'Created: ${DateFormat('MMM dd, yyyy').format(pot.createdAt)}',
+                      'Dibuat: ${DateFormat('d MMM yyyy', 'id_ID').format(pot.createdAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
                     ),
                     Text(
-                      'Last updated: ${DateFormat('MMM dd, yyyy').format(pot.updatedAt)}',
+                      'Terakhir diperbarui: ${DateFormat('d MMM yyyy', 'id_ID').format(pot.updatedAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -831,8 +835,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
         builder: (context, setState) => AlertDialog(
           title: Text(
             type == TransactionType.income 
-                ? 'Add to ${pot.name}'
-                : 'Withdraw from ${pot.name}',
+                ? 'Tambah ke ${pot.name}'
+                : 'Tarik dari ${pot.name}',
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -857,7 +861,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Current Balance:',
+                      'Saldo Saat Ini:',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -880,8 +884,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                 TextField(
                   controller: amountController,
                   decoration: InputDecoration(
-                    labelText: '${type == TransactionType.income ? 'Add' : 'Withdraw'} Amount *',
-                    hintText: 'e.g., 500000',
+                    labelText: '${type == TransactionType.income ? 'Jumlah Tambahan' : 'Jumlah Penarikan'} *',
+                    hintText: 'contoh: 500000',
                     prefixText: 'Rp ',
                     prefixIcon: Icon(
                       type == TransactionType.income ? Icons.add : Icons.remove,
@@ -898,8 +902,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                 TextField(
                   controller: notesController,
                   decoration: const InputDecoration(
-                    labelText: 'Notes (Optional)',
-                    hintText: 'e.g., Salary, Gift, Groceries',
+                    labelText: 'Catatan (Opsional)',
+                    hintText: 'contoh: Gaji, Hadiah, Belanja',
                   ),
                   maxLength: 100,
                 ),
@@ -908,7 +912,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                 
                 // Date field
                 const Text(
-                  'Transaction Date',
+                  'Tanggal Transaksi',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -934,7 +938,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   },
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
-                    DateFormat('MMM dd, yyyy').format(transactionDate),
+                    DateFormat('d MMM yyyy', 'id_ID').format(transactionDate),
                   ),
                 ),
               ],
@@ -945,7 +949,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: const Text('CANCEL'),
+              child: const Text('BATAL'),
             ),
             ElevatedButton(
               onPressed: isSubmitting 
@@ -954,7 +958,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       // Validate inputs
                       if (amountController.text.trim().isEmpty) {
                         setState(() {
-                          errorMessage = 'Please enter an amount';
+                          errorMessage = 'Silakan masukkan jumlah';
                         });
                         return;
                       }
@@ -966,13 +970,13 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                         );
                         if (amount <= 0) {
                           setState(() {
-                            errorMessage = 'Amount must be greater than zero';
+                            errorMessage = 'Jumlah harus lebih besar dari nol';
                           });
                           return;
                         }
                       } catch (e) {
                         setState(() {
-                          errorMessage = 'Please enter a valid amount';
+                          errorMessage = 'Silakan masukkan jumlah yang valid';
                         });
                         return;
                       }
@@ -980,7 +984,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       // For withdrawals, check if there's enough balance
                       if (type == TransactionType.expense && amount > pot.currentBalance) {
                         setState(() {
-                          errorMessage = 'Insufficient balance for withdrawal';
+                          errorMessage = 'Saldo tidak cukup untuk penarikan';
                         });
                         return;
                       }
@@ -1023,8 +1027,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                             SnackBar(
                               content: Text(
                                 type == TransactionType.income
-                                    ? 'Successfully added to ${pot.name}'
-                                    : 'Successfully withdrawn from ${pot.name}',
+                                    ? 'Berhasil menambahkan ke ${pot.name}'
+                                    : 'Berhasil menarik dari ${pot.name}',
                               ),
                               backgroundColor: Colors.green,
                             ),
@@ -1034,7 +1038,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                           setState(() {
                             isSubmitting = false;
                             errorMessage = transactionProvider.errorMessage ?? 
-                                'Failed to process transaction';
+                                'Gagal memproses transaksi';
                           });
                           print('Failed to create transaction: ${transactionProvider.errorMessage}');
                         }
@@ -1042,7 +1046,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                         print('Exception creating transaction: $e');
                         setState(() {
                           isSubmitting = false;
-                          errorMessage = 'An error occurred: ${e.toString()}';
+                          errorMessage = 'Terjadi kesalahan: ${e.toString()}';
                         });
                       }
                     },
@@ -1060,7 +1064,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       ),
                     )
                   : Text(
-                      type == TransactionType.income ? 'ADD' : 'WITHDRAW'
+                      type == TransactionType.income ? 'TAMBAH' : 'TARIK'
                     ),
             ),
           ],
@@ -1089,7 +1093,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Edit Savings Pot'),
+              title: const Text('Edit Celengan'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1112,8 +1116,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: nameController,
                       decoration: const InputDecoration(
-                        labelText: 'Name *',
-                        hintText: 'e.g., Vacation Fund',
+                        labelText: 'Nama *',
+                        hintText: 'contoh: Dana Liburan',
                       ),
                       textCapitalization: TextCapitalization.words,
                       maxLength: 50,
@@ -1125,8 +1129,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: descriptionController,
                       decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'e.g., Saving for summer vacation',
+                        labelText: 'Deskripsi',
+                        hintText: 'contoh: Tabungan untuk liburan musim panas',
                       ),
                       maxLength: 200,
                       maxLines: 2,
@@ -1138,8 +1142,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: targetAmountController,
                       decoration: const InputDecoration(
-                        labelText: 'Target Amount (Optional)',
-                        hintText: 'e.g., 5000000',
+                        labelText: 'Jumlah Target (Opsional)',
+                        hintText: 'contoh: 5000000',
                         prefixText: 'Rp ',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1149,7 +1153,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     
                     // Target date field
                     const Text(
-                      'Target Date (Optional)',
+                      'Tanggal Target (Opsional)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -1180,8 +1184,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       icon: const Icon(Icons.calendar_today),
                       label: Text(
                         selectedDate != null
-                            ? DateFormat('MMM dd, yyyy').format(selectedDate!)
-                            : 'Select Target Date',
+                            ? DateFormat('d MMM yyyy', 'id_ID').format(selectedDate!)
+                            : 'Pilih Tanggal Target',
                       ),
                     ),
                   ],
@@ -1192,7 +1196,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                   },
-                  child: const Text('CANCEL'),
+                  child: const Text('BATAL'),
                 ),
                 ElevatedButton(
                   onPressed: isSubmitting
@@ -1201,7 +1205,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                           // Validate inputs
                           if (nameController.text.trim().isEmpty) {
                             setDialogState(() {
-                              errorMessage = 'Please enter a name for your savings pot';
+                              errorMessage = 'Silakan masukkan nama untuk celengan Anda';
                             });
                             return;
                           }
@@ -1214,13 +1218,13 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               );
                               if (targetAmount <= 0) {
                                 setDialogState(() {
-                                  errorMessage = 'Target amount must be greater than zero';
+                                  errorMessage = 'Jumlah target harus lebih besar dari nol';
                                 });
                                 return;
                               }
                             } catch (e) {
                               setDialogState(() {
-                                errorMessage = 'Please enter a valid target amount';
+                                errorMessage = 'Silakan masukkan jumlah target yang valid';
                               });
                               return;
                             }
@@ -1260,7 +1264,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                                 // Show success message
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Savings pot updated successfully!'),
+                                    content: Text('Celengan berhasil diperbarui!'),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
@@ -1270,14 +1274,14 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               setDialogState(() {
                                 isSubmitting = false;
                                 errorMessage = savingsProvider.errorMessage ??
-                                    'Failed to update savings pot';
+                                    'Gagal memperbarui celengan';
                               });
                             }
                           } catch (e) {
                             if (!mounted) return;
                             setDialogState(() {
                               isSubmitting = false;
-                              errorMessage = 'An error occurred: ${e.toString()}';
+                              errorMessage = 'Terjadi kesalahan: ${e.toString()}';
                             });
                           }
                         },
@@ -1294,7 +1298,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                             color: Colors.white,
                           ),
                         )
-                      : const Text('SAVE'),
+                      : const Text('SIMPAN'),
                 ),
               ],
             );
@@ -1331,7 +1335,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
           builder: (context, setDialogState) {
             print("StatefulBuilder rebuilding");
             return AlertDialog(
-              title: const Text('Create New Savings Pot'),
+              title: const Text('Buat Celengan Baru'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1354,8 +1358,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: nameController,
                       decoration: const InputDecoration(
-                        labelText: 'Name *',
-                        hintText: 'e.g., Vacation Fund',
+                        labelText: 'Nama *',
+                        hintText: 'contoh: Dana Liburan',
                       ),
                       textCapitalization: TextCapitalization.words,
                       maxLength: 50,
@@ -1368,8 +1372,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: descriptionController,
                       decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'e.g., Saving for summer vacation',
+                        labelText: 'Deskripsi',
+                        hintText: 'contoh: Tabungan untuk liburan musim panas',
                       ),
                       maxLength: 200,
                       maxLines: 2,
@@ -1381,8 +1385,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     TextField(
                       controller: targetAmountController,
                       decoration: const InputDecoration(
-                        labelText: 'Target Amount (Optional)',
-                        hintText: 'e.g., 5000000',
+                        labelText: 'Jumlah Target (Opsional)',
+                        hintText: 'contoh: 5000000',
                         prefixText: 'Rp ',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1392,7 +1396,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     
                     // Target date field
                     const Text(
-                      'Target Date (Optional)',
+                      'Tanggal Target (Opsional)',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -1423,8 +1427,8 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                       icon: const Icon(Icons.calendar_today),
                       label: Text(
                         selectedDate != null
-                            ? DateFormat('MMM dd, yyyy').format(selectedDate!)
-                            : 'Select Target Date',
+                            ? DateFormat('d MMM yyyy', 'id_ID').format(selectedDate!)
+                            : 'Pilih Tanggal Target',
                       ),
                     ),
                   ],
@@ -1435,7 +1439,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                   onPressed: () {
                     Navigator.of(dialogContext).pop();
                   },
-                  child: const Text('CANCEL'),
+                  child: const Text('BATAL'),
                 ),
                 ElevatedButton(
                   onPressed: isSubmitting
@@ -1446,7 +1450,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                           // Validate inputs
                           if (nameController.text.trim().isEmpty) {
                             setDialogState(() {
-                              errorMessage = 'Please enter a name for your savings pot';
+                              errorMessage = 'Silakan masukkan nama untuk celengan Anda';
                             });
                             print("Validation error: Name is empty");
                             return;
@@ -1460,14 +1464,14 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               );
                               if (targetAmount <= 0) {
                                 setDialogState(() {
-                                  errorMessage = 'Target amount must be greater than zero';
+                                  errorMessage = 'Jumlah target harus lebih besar dari nol';
                                 });
                                 print("Validation error: Target amount <= 0");
                                 return;
                               }
                             } catch (e) {
                               setDialogState(() {
-                                errorMessage = 'Please enter a valid target amount';
+                                errorMessage = 'Silakan masukkan jumlah target yang valid';
                               });
                               print("Validation error parsing target amount: $e");
                               return;
@@ -1514,7 +1518,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                                 // Show success message
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Savings pot created successfully!'),
+                                    content: Text('Celengan berhasil dibuat!'),
                                     backgroundColor: Colors.green,
                                   ),
                                 );
@@ -1524,7 +1528,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                               setDialogState(() {
                                 isSubmitting = false;
                                 errorMessage = savingsProvider.errorMessage ??
-                                    'Failed to create savings pot';
+                                    'Gagal membuat celengan';
                               });
                               print('Failed to create pot: ${savingsProvider.errorMessage}');
                             }
@@ -1533,7 +1537,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                             if (!mounted) return;
                             setDialogState(() {
                               isSubmitting = false;
-                              errorMessage = 'An error occurred: ${e.toString()}';
+                              errorMessage = 'Terjadi kesalahan: ${e.toString()}';
                             });
                           }
                         },
@@ -1550,7 +1554,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                             color: Colors.white,
                           ),
                         )
-                      : const Text('CREATE'),
+                      : const Text('BUAT'),
                 ),
               ],
             );
@@ -1564,17 +1568,17 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Savings Pot'),
+        title: const Text('Hapus Celengan'),
         content: RichText(
           text: TextSpan(
             style: TextStyle(color: Colors.grey[800], fontSize: 16),
             children: [
-              const TextSpan(text: 'Are you sure you want to delete '),
+              const TextSpan(text: 'Apakah Anda yakin ingin menghapus '),
               TextSpan(
                 text: pot.name,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              const TextSpan(text: '? This action cannot be undone.'),
+              const TextSpan(text: '? Tindakan ini tidak dapat dibatalkan.'),
             ],
           ),
         ),
@@ -1583,7 +1587,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             onPressed: () {
               Navigator.of(context).pop();
             },
-            child: const Text('CANCEL'),
+            child: const Text('BATAL'),
           ),
           TextButton(
             onPressed: () async {
@@ -1600,7 +1604,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(width: 16),
-                      Text('Deleting...'),
+                      Text('Menghapus...'),
                     ],
                   ),
                 ),
@@ -1615,14 +1619,14 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Savings pot deleted successfully'),
+                    content: Text('Celengan berhasil dihapus'),
                     backgroundColor: Colors.green,
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(savingsProvider.errorMessage ?? 'Failed to delete savings pot'),
+                    content: Text(savingsProvider.errorMessage ?? 'Gagal menghapus celengan'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -1631,7 +1635,7 @@ class SavingsPotTabState extends State<SavingsPotTab> with TickerProviderStateMi
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('DELETE'),
+            child: const Text('HAPUS'),
           ),
         ],
       ),

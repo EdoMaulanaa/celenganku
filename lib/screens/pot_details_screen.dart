@@ -11,6 +11,7 @@ import '../models/transaction.dart';
 import '../models/transaction_category.dart';
 import '../utils/formatter.dart';
 import '../utils/chart_utils.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class PotDetailsScreen extends StatefulWidget {
   final String potId;
@@ -29,6 +30,8 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize locale for Indonesian date formatting
+    initializeDateFormatting('id_ID', null);
     // Use Future.microtask to ensure we're not in the build phase
     Future.microtask(() => _loadData());
   }
@@ -90,6 +93,22 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
           appBar: AppBar(
             title: Text(pot.name),
             elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  _showEditPotDialog(pot, context);
+                },
+                tooltip: 'Edit',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () {
+                  _showDeleteConfirmation(pot, context);
+                },
+                tooltip: 'Delete',
+              ),
+            ],
           ),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -110,9 +129,9 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         if (pot.targetAmount != null && pot.targetAmount! > 0)
                           _buildProgressChart(pot, transactions),
                         
-                        // Display calculated daily savings needed
-                        if (pot.targetAmount != null && pot.targetAmount! > 0)
-                          _buildSavingsGoalInfo(pot),
+                        // Display calculated daily savings needed and days remaining after chart
+                        if (pot.targetAmount != null && pot.targetAmount! > 0 && pot.targetDate != null)
+                          _buildSavingsRequirementInfo(pot),
                         
                         const SizedBox(height: 20),
                         
@@ -188,7 +207,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
             
             // Balance
             const Text(
-              'Current Balance',
+              'Saldo Saat Ini',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -217,7 +236,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Target Amount',
+                          'Jumlah Target',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -240,7 +259,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Target Date',
+                            'Tanggal Target',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -248,7 +267,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            DateFormat('MMM dd, yyyy').format(pot.targetDate!),
+                            DateFormat('d MMM yyyy', 'id_ID').format(pot.targetDate!),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -264,7 +283,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
               
               // Progress
               const Text(
-                'Progress',
+                'Progres',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -301,7 +320,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                     builder: (context, snapshot) {
                       if (snapshot.hasData && snapshot.data != null && snapshot.data! > 0) {
                         return Text(
-                          'Need ${currencyFormat.format(snapshot.data!)} / day',
+                          'Butuh ${currencyFormat.format(snapshot.data!)} / hari',
                           style: TextStyle(
                             color: Colors.orange[700],
                             fontWeight: FontWeight.bold,
@@ -325,7 +344,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       final days = snapshot.data!;
                       if (days <= 0) {
                         return Text(
-                          'Target date has passed!',
+                          'Tanggal target telah berlalu!',
                           style: TextStyle(
                             color: Colors.red[700],
                             fontWeight: FontWeight.bold,
@@ -333,7 +352,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         );
                       }
                       return Text(
-                        '$days days remaining',
+                        '$days hari tersisa',
                         style: TextStyle(
                           color: days < 7 ? Colors.red[700] : Colors.grey[600],
                         ),
@@ -368,7 +387,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Savings Progress',
+            'Progres Tabungan',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -391,7 +410,8 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
     );
   }
   
-  Widget _buildSavingsGoalInfo(SavingsPot pot) {
+  // Add a compact method to display savings requirements without duplicating the card
+  Widget _buildSavingsRequirementInfo(SavingsPot pot) {
     final currencyFormat = NumberFormat.currency(locale: 'id', symbol: 'Rp', decimalDigits: 0);
     
     return Card(
@@ -400,117 +420,47 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Savings Goal Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Target: ${Formatter.formatCurrency(pot.targetAmount!)} by ${pot.targetDate != null ? DateFormat('MMM dd, yyyy').format(pot.targetDate!) : 'No date set'}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Target Amount',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        currencyFormat.format(pot.targetAmount!),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (pot.targetDate != null)
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Target Date',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('MMM dd, yyyy').format(pot.targetDate!),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Progress
-            const Text(
-              'Progress',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            
-            // Progress bar
-            LinearProgressIndicator(
-              value: pot.progressPercentage / 100,
-              minHeight: 12,
-              borderRadius: BorderRadius.circular(6),
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                pot.progressPercentage >= 100 
-                    ? Colors.green 
-                    : Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            
-            const SizedBox(height: 8),
-            
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${pot.progressPercentage.toStringAsFixed(1)}%',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
                 FutureBuilder<double?>(
                   future: _dailySavingsNeededFuture,
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null && snapshot.data! > 0) {
                       return Text(
-                        'Need ${currencyFormat.format(snapshot.data!)} / day',
+                        'Butuh ${currencyFormat.format(snapshot.data!)} / hari',
                         style: TextStyle(
                           color: Colors.orange[700],
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                
+                FutureBuilder<int?>(
+                  future: _daysRemainingFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      final days = snapshot.data!;
+                      if (days <= 0) {
+                        return Text(
+                          'Tanggal target telah berlalu!',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        );
+                      }
+                      return Text(
+                        '$days hari tersisa',
+                        style: TextStyle(
+                          color: days < 7 ? Colors.red[700] : Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
                         ),
                       );
                     }
@@ -522,32 +472,14 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
             
             const SizedBox(height: 8),
             
-            // Days remaining
-            if (pot.targetDate != null)
-              FutureBuilder<int?>(
-                future: _daysRemainingFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    final days = snapshot.data!;
-                    if (days <= 0) {
-                      return Text(
-                        'Target date has passed!',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    }
-                    return Text(
-                      '$days days remaining',
-                      style: TextStyle(
-                        color: days < 7 ? Colors.red[700] : Colors.grey[600],
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
+            // Target date
+            Text(
+              'Target: ${pot.targetDate != null ? DateFormat('d MMM yyyy', 'id_ID').format(pot.targetDate!) : 'Tanggal tidak ditentukan'}',
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 14,
               ),
+            ),
           ],
         ),
       ),
@@ -561,7 +493,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Transactions',
+          'Transaksi',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -581,7 +513,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'No transactions yet',
+                    'Belum ada transaksi',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -589,7 +521,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Add funds to start tracking your progress',
+                    'Tambahkan dana untuk mulai melacak progres Anda',
                     style: TextStyle(
                       color: Colors.grey,
                     ),
@@ -626,13 +558,13 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                     ),
                   ),
                   title: Text(
-                    transaction.notes ?? 'Transaction',
+                    transaction.notes ?? (transaction.type == TransactionType.income ? 'Pemasukan' : 'Pengeluaran'),
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   subtitle: Text(
-                    DateFormat('MMM dd, yyyy').format(transaction.date),
+                    DateFormat('d MMM yyyy', 'id_ID').format(transaction.date),
                     style: TextStyle(
                       color: Colors.grey[600],
                     ),
@@ -685,9 +617,9 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text(
-            transactionType == TransactionType.income
-                ? 'Deposit to ${pot.name}'
-                : 'Withdraw from ${pot.name}',
+            transactionType == TransactionType.income 
+                ? 'Tambah ke ${pot.name}'
+                : 'Tarik dari ${pot.name}',
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -712,7 +644,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Current Balance:',
+                      'Saldo Saat Ini:',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -735,8 +667,8 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                 TextField(
                   controller: amountController,
                   decoration: InputDecoration(
-                    labelText: 'Amount *',
-                    hintText: 'e.g., 500000',
+                    labelText: 'Jumlah *',
+                    hintText: 'contoh: 500000',
                     prefixText: 'Rp ',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -749,8 +681,8 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                 TextField(
                   controller: notesController,
                   decoration: const InputDecoration(
-                    labelText: 'Notes (Optional)',
-                    hintText: 'e.g., Salary, Gift, Groceries',
+                    labelText: 'Catatan (Opsional)',
+                    hintText: 'contoh: Gaji, Hadiah, Belanja',
                   ),
                   maxLength: 100,
                 ),
@@ -759,7 +691,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                 if (transactionType == TransactionType.expense) ...[
                   const SizedBox(height: 16),
                   const Text(
-                    'Category',
+                    'Kategori',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
@@ -769,13 +701,13 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   DropdownButtonFormField<String>(
                     value: selectedCategoryId,
                     decoration: const InputDecoration(
-                      labelText: 'Select a category',
+                      labelText: 'Pilih kategori',
                       border: OutlineInputBorder(),
                     ),
                     items: [
                       const DropdownMenuItem<String>(
                         value: null,
-                        child: Text('No category'),
+                        child: Text('Tanpa kategori'),
                       ),
                       ...categories.map((category) {
                         return DropdownMenuItem<String>(
@@ -809,7 +741,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                 
                 // Date field
                 const Text(
-                  'Transaction Date',
+                  'Tanggal Transaksi',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
@@ -835,7 +767,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                   },
                   icon: const Icon(Icons.calendar_today),
                   label: Text(
-                    DateFormat('MMM dd, yyyy').format(transactionDate),
+                    DateFormat('d MMM yyyy', 'id_ID').format(transactionDate),
                   ),
                 ),
               ],
@@ -846,7 +778,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('CANCEL'),
+              child: const Text('BATAL'),
             ),
             ElevatedButton(
               onPressed: isSubmitting 
@@ -855,7 +787,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       // Validate inputs
                       if (amountController.text.trim().isEmpty) {
                         setState(() {
-                          errorMessage = 'Please enter an amount';
+                          errorMessage = 'Silakan masukkan jumlah';
                         });
                         return;
                       }
@@ -867,13 +799,13 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         );
                         if (amount <= 0) {
                           setState(() {
-                            errorMessage = 'Amount must be greater than zero';
+                            errorMessage = 'Jumlah harus lebih besar dari nol';
                           });
                           return;
                         }
                       } catch (e) {
                         setState(() {
-                          errorMessage = 'Please enter a valid amount';
+                          errorMessage = 'Silakan masukkan jumlah yang valid';
                         });
                         return;
                       }
@@ -881,7 +813,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       // For withdrawals, check if there's enough balance
                       if (transactionType == TransactionType.expense && amount > pot.currentBalance) {
                         setState(() {
-                          errorMessage = 'Insufficient balance for withdrawal';
+                          errorMessage = 'Saldo tidak cukup untuk penarikan';
                         });
                         return;
                       }
@@ -930,13 +862,13 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                           print('Transaction created successfully');
                           
                           final actionText = transactionType == TransactionType.income
-                              ? 'deposited to'
-                              : 'withdrawn from';
+                              ? 'ditambahkan ke'
+                              : 'ditarik dari';
                               
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Successfully $actionText ${pot.name}',
+                                'Berhasil $actionText ${pot.name}',
                               ),
                               backgroundColor: transactionType == TransactionType.income
                                   ? Colors.green
@@ -948,7 +880,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                           setState(() {
                             isSubmitting = false;
                             errorMessage = transactionProvider.errorMessage ?? 
-                                'Failed to process transaction';
+                                'Gagal memproses transaksi';
                           });
                           print('Failed to create transaction: ${transactionProvider.errorMessage}');
                         }
@@ -956,7 +888,7 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                         print('Exception creating transaction: $e');
                         setState(() {
                           isSubmitting = false;
-                          errorMessage = 'An error occurred: ${e.toString()}';
+                          errorMessage = 'Terjadi kesalahan: ${e.toString()}';
                         });
                       }
                     },
@@ -976,11 +908,319 @@ class _PotDetailsScreenState extends State<PotDetailsScreen> {
                       ),
                     )
                   : Text(transactionType == TransactionType.income 
-                      ? 'DEPOSIT' 
-                      : 'WITHDRAW'),
+                      ? 'TAMBAH' 
+                      : 'TARIK'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Add the edit and delete methods
+  void _showEditPotDialog(SavingsPot pot, BuildContext context) {
+    // Controllers for text fields
+    final nameController = TextEditingController(text: pot.name);
+    final descriptionController = TextEditingController(text: pot.description);
+    final targetAmountController = TextEditingController(
+      text: pot.targetAmount?.toString() ?? ''
+    );
+    
+    // Variables for state
+    DateTime? selectedDate = pot.targetDate;
+    bool isSubmitting = false;
+    String? errorMessage;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Edit Celengan'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Error message
+                  if (errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  
+                  // Name field
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nama *',
+                      hintText: 'contoh: Dana Liburan',
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    maxLength: 50,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Description field
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Deskripsi',
+                      hintText: 'contoh: Tabungan untuk liburan musim panas',
+                    ),
+                    maxLength: 200,
+                    maxLines: 2,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Target amount field
+                  TextField(
+                    controller: targetAmountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Jumlah Target (Opsional)',
+                      hintText: 'contoh: 5000000',
+                      prefixText: 'Rp ',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Target date field
+                  const Text(
+                    'Tanggal Target (Opsional)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final DateTime? picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate ?? DateTime.now().add(const Duration(days: 30)),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                        );
+                        
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedDate = picked;
+                          });
+                        }
+                      } catch (e) {
+                        print("Error selecting date: $e");
+                      }
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(
+                      selectedDate != null
+                          ? DateFormat('d MMM yyyy', 'id_ID').format(selectedDate!)
+                          : 'Pilih Tanggal Target',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('BATAL'),
+              ),
+              ElevatedButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () async {
+                        // Validate inputs
+                        if (nameController.text.trim().isEmpty) {
+                          setDialogState(() {
+                            errorMessage = 'Silakan masukkan nama untuk celengan Anda';
+                          });
+                          return;
+                        }
+                        
+                        double? targetAmount;
+                        if (targetAmountController.text.isNotEmpty) {
+                          try {
+                            targetAmount = double.parse(
+                              targetAmountController.text.replaceAll(RegExp(r'[^0-9.]'), '')
+                            );
+                            if (targetAmount <= 0) {
+                              setDialogState(() {
+                                errorMessage = 'Jumlah target harus lebih besar dari nol';
+                              });
+                              return;
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              errorMessage = 'Silakan masukkan jumlah target yang valid';
+                            });
+                            return;
+                          }
+                        }
+                        
+                        // Start submission
+                        setDialogState(() {
+                          isSubmitting = true;
+                          errorMessage = null;
+                        });
+                        
+                        try {
+                          final savingsProvider = Provider.of<SavingsProvider>(
+                            context,
+                            listen: false
+                          );
+                          
+                          final success = await savingsProvider.updateSavingsPot(
+                            id: pot.id,
+                            name: nameController.text.trim(),
+                            description: descriptionController.text.trim(),
+                            targetAmount: targetAmount,
+                            targetDate: selectedDate,
+                          );
+                          
+                          if (success) {
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                            
+                            // Refresh the data
+                            _loadData();
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Celengan berhasil diperbarui!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              errorMessage = savingsProvider.errorMessage ??
+                                  'Gagal memperbarui celengan';
+                            });
+                          }
+                        } catch (e) {
+                          setDialogState(() {
+                            isSubmitting = false;
+                            errorMessage = 'Terjadi kesalahan: ${e.toString()}';
+                          });
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('PERBARUI'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+  
+  void _showDeleteConfirmation(SavingsPot pot, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Celengan'),
+        content: RichText(
+          text: TextSpan(
+            style: TextStyle(color: Colors.grey[800], fontSize: 16),
+            children: [
+              const TextSpan(text: 'Apakah Anda yakin ingin menghapus '),
+              TextSpan(
+                text: pot.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(text: '? Tindakan ini tidak dapat dibatalkan.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('BATAL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final savingsProvider = Provider.of<SavingsProvider>(context, listen: false);
+              
+              Navigator.of(dialogContext).pop();
+              
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingContext) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Menghapus...'),
+                    ],
+                  ),
+                ),
+              );
+              
+              // Delete the pot
+              bool success = await savingsProvider.deleteSavingsPot(pot.id);
+              
+              if (!context.mounted) return;
+              Navigator.of(context).pop(); // Pop loading dialog
+              
+              if (success) {
+                // Navigate back to home screen
+                Navigator.of(context).pop(); // Pop details screen
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Celengan berhasil dihapus'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(savingsProvider.errorMessage ?? 'Gagal menghapus celengan'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('HAPUS'),
+          ),
+        ],
       ),
     );
   }
